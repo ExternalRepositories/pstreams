@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.4.2.1 2002/01/27 13:21:29 redi Exp $
+# $Id: Makefile,v 1.4.2.2 2002/01/27 13:28:39 redi Exp $
 # PStreams Makefile
 # Copyright (C) Jonathan Wakely
 #
@@ -32,7 +32,6 @@ DISTFILES= $(SOURCES) $(DOCS) $(EXTRA_DIST)
 all: test distro
 
 test: test_pstreams test_minimum
-	@echo -n "Testing whether popen() uses bidirectional pipe ... "
 	@./test_minimum >/dev/null
 	@./test_pstreams >/dev/null || echo "TEST EXITED WITH STATUS $?"
 
