@@ -1,4 +1,4 @@
-/* $Id: pstream.h,v 1.79.2.4 2005/04/06 15:32:36 francisandre Exp $
+/* $Id: pstream.h,v 1.79.2.5 2005/04/06 16:11:21 francisandre Exp $
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001,2002,2003,2004 Jonathan Wakely
 
@@ -43,15 +43,7 @@ along with PStreams; if not, write to the Free Software Foundation, Inc.,
 #include <cstddef>      // for size_t
 #include <cstdlib>      // for exit()
 #include <assert.h>
-
-#if defined(_WIN32) || defined(WIN32)
-	#define REDI_OS_WIN32
-	#ifndef WIN32
-		#define WIN32
-	#endif
-#else
-	#define REDI_OS_UNIX
-#endif
+#include <pstreams/config.h>
 
 #if		defined(REDI_OS_UNIX)
 	#include <sys/types.h>  // for pid_t
