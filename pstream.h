@@ -1,4 +1,4 @@
-/* $Id: pstream.h,v 1.17.2.6 2002/01/27 20:39:09 redi Exp $
+/* $Id: pstream.h,v 1.17.2.7 2002/01/27 20:58:31 redi Exp $
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001,2002 Jonathan Wakely
 
@@ -561,7 +561,7 @@ namespace redi
               argv[i].copy(arg_v[i], std::string::npos);
               arg_v[i][argv[i].size()] = 0;
 #else
-              arg_v[i] = argv[i].c_str();
+              arg_v[i] = const_cast<char*>(argv[i].c_str());
 #endif
             }
             arg_v[argv.size()] = 0;
