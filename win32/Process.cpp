@@ -1,18 +1,16 @@
-#include <cstring>
 #include <iostream>
-#include <cstdio>
-#include <cstring>
+#include <cassert>
 
 #define	null 0
 
-#include "Process.h"
+#include <win32/Process.h>
 
 void Process::init() {
 	started = false;envlen = 0;arglen = 0;
 	error = -1; status_ = UNDEF;
 
-#if		defined(OS_UNIX)
-#elif	defined(OS_WIN32)
+#if		defined(REDI_OS_UNIX)
+#elif	defined(REDI_OS_WIN32)
     ZeroMemory( &startup, sizeof(startup) );
     startup.cb = sizeof(startup);
     ZeroMemory( &pid, sizeof(pid) );
@@ -28,11 +26,17 @@ command(command)
 {
 	init();
 }
+Process::Process(const string& program, Arguments arguments) :
+program(program),
+arguments(arguments)
+{
+	init();
+}
 Process::Process(const string& command, void* in, void* out, void* err) :
 command(command) {
 	init();
-#if		defined(OS_UNIX)
-#elif	defined(OS_WIN32)
+#if		defined(REDI_OS_UNIX)
+#elif	defined(REDI_OS_WIN32)
 	startup.hStdError	= err;
 	startup.hStdOutput	= out;
 	startup.hStdInput	= in;
@@ -40,16 +44,13 @@ command(command) {
 	args = null; env = null;
 #endif
 }
-Process::Process(const Program& program) :
-program(program)
+Process::Process(const string& program, Arguments arguments, void* in, void* out, void* err) :
+program(program),
+arguments(arguments)
 {
 	init();
-}
-Process::Process(const Program& program, void* in, void* out, void* err) :
-program(program) {
-	init();
-#if		defined(OS_UNIX)
-#elif	defined(OS_WIN32)
+#if		defined(REDI_OS_UNIX)
+#elif	defined(REDI_OS_WIN32)
 	startup.hStdError	= err;
 	startup.hStdOutput	= out;
 	startup.hStdInput	= in;
@@ -58,7 +59,7 @@ program(program) {
 #endif
 }
 Process::Exception::Exception(const string& text) :
-	runtime_error("Process::Exception: ") {
+	exception("Process::Exception: ") {
 }
 Process::Exception::~Exception() {
 }
@@ -86,8 +87,12 @@ void Process::addVariable(const string& var, const string& value){
 	environment.push_back(var + "=" + value);
 	envlen += var.size() + 1 + value.size() + 1;
 }
-void Process::start() throw(Exception){		// Start the child process. 
-	if( CreateProcess(program.getPath().c_str(), // Application name
+void Process::start() throw() {		// Start the child process. 
+	const char* appl = null;
+	if  (!program.empty()) {
+		appl = program.c_str();
+	}
+	if( CreateProcess(appl,					// Application name
         args,								// Application arguments
         &psec,								// Process handle not inheritable. 
         &tsec,								// Thread handle not inheritable. 
@@ -100,14 +105,13 @@ void Process::start() throw(Exception){		// Start the child process.
     ) 
     {
 		WaitForInputIdle(pid.hProcess, INFINITE);
+		CloseHandle(pid.hThread);
 		started = true;
-	} else {
-		throw Exception("CreateProcess failed : " + GetLastError());
     }
 }
 bool Process::spawn() {
-#if		defined(OS_UNIX)
-#elif	defined(OS_WIN32)
+#if		defined(REDI_OS_UNIX)
+#elif	defined(REDI_OS_WIN32)
 	ZeroMemory( &psec, sizeof(psec) );
 	psec.nLength = sizeof(psec);
 	psec.bInheritHandle = TRUE;
@@ -148,7 +152,7 @@ bool Process::spawn() {
 }
 Process::ChildState Process::wait(bool nohang, int milli) {
 	ChildState		exitcode = UNDEF;
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
 	switch (::waitpid(ppid, &status_, nohang ? WNOHANG : 0)) {
 		case 0 :
 			// nohang was true and process has not exited
@@ -163,44 +167,59 @@ Process::ChildState Process::wait(bool nohang, int milli) {
 			exitcode = EXITED;
 			break;
 	}
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 	DWORD	waitresult;
 	if  (started) {
 		// Wait until child process exits.
-		do{
-                //do some processing here so the app does not appear frozen.
-			waitresult = WaitForSingleObject(pid.hProcess, milli);
-        } while(waitresult == WAIT_TIMEOUT);
-        
-		if (waitresult == WAIT_FAILED){
-			cout << "WaitForSingleObject() failed" << endl;
-                //it failed
-                //again we should do something so we don't keep executing
-        }
+		try {
+			do{
+				waitresult = WaitForSingleObject(pid.hProcess, milli);
+			} while(waitresult == WAIT_TIMEOUT);
+	        
+			switch(waitresult) {
+				case WAIT_FAILED:
+					exitcode = EXITED;
+				break;
+				case WAIT_TIMEOUT:
+					exitcode = ACTIVE;
+				break;
+				case  WAIT_OBJECT_0:
 
-		GetExitCodeProcess(pid.hProcess, &status_);
+					GetExitCodeProcess(pid.hProcess, &status_);
 
-		cout << "Process::RC=" << status() << endl;
-		// Close process and thread handles. 
-		CloseHandle( pid.hProcess );
-		CloseHandle( pid.hThread );
-
+					if  (status_ == STILL_ACTIVE) {
+						exitcode = ACTIVE;
+					} else {
+						exitcode = EXITED;
+					}
+					CloseHandle( pid.hProcess );
+				break;
+				default:
+					assert(0);
+				break;
+			}
+		} catch(...) {
+			cerr << "Process::wait(bool nohang, int milli) : unhandled exception" << endl;
+		}
 	}
 #endif
 		return exitcode;
 }
 Process::ChildState Process::state() {
-#if		defined(OS_UNIX)
-#elif	defined(OS_WIN32)
+#if		defined(REDI_OS_UNIX)
+#elif	defined(REDI_OS_WIN32)
 	DWORD	waitresult;
-	DWORD	code;
-	waitresult = GetExitCodeProcess(pid.hProcess, &code);
-	if  (code == STILL_ACTIVE) return ACTIVE;
-	else return EXITED;
+	waitresult = GetExitCodeProcess(pid.hProcess, &status_);
+
+	if  (status_ == STILL_ACTIVE)  {
+		return ACTIVE;
+	} else {
+		return EXITED;
+	}
 #endif
 }
 bool Process::stop() {
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
 	if (::kill(ppid_, signal))
 		error = errno;
 		return false;
@@ -213,9 +232,9 @@ bool Process::stop() {
 #endif
 }
 Process::getLastError() const {
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
 	return error;
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 	return ::GetLastError();
 #endif
 }

@@ -1,41 +1,46 @@
 #ifndef	_Process_h_
 #define _Process_h_
 
-#include "autosense.h"
-
-#if		defined(OS_UNIX)
-#elif	defined(OS_WIN32)
-#ifdef	DWORD
-#undef	DWORD
+#if defined(_WIN32) || defined(WIN32)
+	#define REDI_OS_WIN32
+	#ifndef WIN32
+		#define WIN32
+	#endif
+#else
+	#define REDI_OS_UNIX
 #endif
 
-#define NOATOM
-#define NOGDI
-#define NOGDICAPMASKS
-#define NOMETAFILE
-#define NOMINMAX
-#define NOMSG
-#define NOOPENFILE
-#define NORASTEROPS
-#define NOSCROLL
-#define NOSOUND
-#define NOSYSMETRICS
-#define NOTEXTMETRIC
-#define NOWH
-#define NOCOMM
-#define NOKANJI
-#define NOCRYPT
-#define NOMCX
+#if		defined(REDI_OS_UNIX)
+#elif	defined(REDI_OS_WIN32)
+	#ifdef	DWORD
+	#undef	DWORD
+	#endif
 
-#include <windows.h>
+	#define NOATOM
+	#define NOGDI
+	#define NOGDICAPMASKS
+	#define NOMETAFILE
+	#define NOMINMAX
+	#define NOMSG
+	#define NOOPENFILE
+	#define NORASTEROPS
+	#define NOSCROLL
+	#define NOSOUND
+	#define NOSYSMETRICS
+	#define NOTEXTMETRIC
+	#define NOWH
+	#define NOCOMM
+	#define NOKANJI
+	#define NOCRYPT
+	#define NOMCX
 
+	#include <windows.h>
 #endif
 
 #include <list>
 #include <vector>
 #include <string>
 #include <stdexcept>
-#include "Program.h"
 
 using namespace std;
 typedef	list<string>		Arguments;
@@ -48,12 +53,12 @@ private:
 	Environment			environment;
 	int					error;
 	string				command;
-	Program				program;
+	string				program;
 
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
 	pid_t				ppid;
 	int					status_;
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 	PROCESS_INFORMATION pid;
 	STARTUPINFO         startup;
 	SECURITY_ATTRIBUTES	psec;	//process level
@@ -61,8 +66,8 @@ private:
 	DWORD				status_;
 	char*				args;
 	char*				env;
-	int					envlen;
-	int					arglen;
+	size_t				envlen;
+	size_t				arglen;
 #endif
 
 private:
@@ -75,18 +80,18 @@ public:
 		EXITED		= 1,
 	};
 	
-	class Exception: public runtime_error {
+	class Exception: public exception {
 	public:
 		Exception(const string& text);
 		~Exception();
 	};
 	Process();
-	Process(const Program& program);
 	Process(const string& command);
-#if		defined(OS_UNIX)
-#elif	defined(OS_WIN32)
-	Process(const Program& program, void* in, void* out, void* err);
+	Process(const string& program, Arguments args);
+#if		defined(REDI_OS_UNIX)
+#elif	defined(REDI_OS_WIN32)
 	Process(const string& command, void* in, void* out, void* err);
+	Process(const string& program, Arguments args, void* in, void* out, void* err);
 #endif
 
 	void setArguments(const Arguments& arguments);
@@ -97,17 +102,17 @@ public:
 
 	bool spawn();
 	bool active() const { return started; };
-	ChildState state();
 	bool stop();
+	ChildState state();
     ChildState wait(bool nohang = true, int milli = INFINITE);
 	
 	int	status() { return status_; }
 	int getLastError() const;
 
 private:
-#if		defined(OS_UNIX)
-#elif	defined(OS_WIN32)
-	void start();
+#if		defined(REDI_OS_UNIX)
+#elif	defined(REDI_OS_WIN32)
+	void start() throw();
 #endif
 
 
