@@ -1,5 +1,8 @@
 #ifndef	_Pipe_h_
 #define _Pipe_h_
+/*
+$Id: Pipe.h,v 1.1.2.3 2004/10/01 07:08:43 francisandre Exp $
+*/
 
 #include <stdexcept>
 
@@ -72,3 +75,9 @@ public:
 };
 
 #endif
+/*
+$Log: Pipe.h,v $
+Revision 1.1.2.3  2004/10/01 07:08:43  francisandre
+add RCS variables: $Id and $Log
+
+*/

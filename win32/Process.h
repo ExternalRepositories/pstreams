@@ -1,6 +1,8 @@
 #ifndef	_Process_h_
 #define _Process_h_
-
+/*
+$Id: Process.h,v 1.1.2.3 2004/10/01 07:08:43 francisandre Exp $
+*/
 #if defined(_WIN32) || defined(WIN32)
 	#define REDI_OS_WIN32
 	#ifndef WIN32
@@ -118,3 +120,9 @@ private:
 
 };
 #endif
+/*
+$Log: Process.h,v $
+Revision 1.1.2.3  2004/10/01 07:08:43  francisandre
+add RCS variables: $Id and $Log
+
+*/

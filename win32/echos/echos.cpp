@@ -1,3 +1,6 @@
+/*
+$Id: echos.cpp,v 1.1.2.2 2004/10/01 07:08:43 francisandre Exp $
+*/
 #include <iostream>
 #include <fcntl.h>
 #include <io.h>

@@ -1,3 +1,6 @@
+/*
+$Id: Process.cpp,v 1.1.2.3 2004/10/01 07:08:43 francisandre Exp $
+*/
 #include <iostream>
 #include <cassert>
 
@@ -238,4 +241,9 @@ Process::getLastError() const {
 	return ::GetLastError();
 #endif
 }
+/*
+$Log: Process.cpp,v $
+Revision 1.1.2.3  2004/10/01 07:08:43  francisandre
+add RCS variables: $Id and $Log
 
+*/
