@@ -1,3 +1,5 @@
+// $Id: pstream_compat.h,v 1.1.4.1 2004/03/30 07:37:49 redi Exp $
+
 #ifndef REDI_PSTREAM_COMPAT_H
 #define REDI_PSTREAM_COMPAT_H
 
@@ -12,7 +14,7 @@
 #error \
     You must define either BACK_COMPAT or GCC_BACK_COMPAT to be 1 \
     to use this file. For gcc versions 2.7 to 2.9x (including egcs) \
-    define GCC_BACKCOMPAT = 1. For other compilers define BACK_COMPAT = 1 \
+    define GCC_BACK_COMPAT = 1. For other compilers define BACK_COMPAT = 1 \
     For ISO C++ conforming compilers use pstream.h instead.
 
 #elif GCC_BACK_COMPAT == 1
