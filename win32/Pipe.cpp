@@ -1,4 +1,8 @@
 #include "autosense.h"
+
+//
+// test commit on SF CVS server
+//
 #if		defined(OS_UNIX)
 #elif	defined(OS_WIN32)
 #define NOATOM
