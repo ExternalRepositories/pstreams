@@ -1,4 +1,4 @@
-/* $Id: pstream.h,v 1.17.2.9 2002/04/20 15:15:20 redi Exp $
+/* $Id: pstream.h,v 1.17.2.10 2002/04/20 18:51:39 redi Exp $
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001,2002 Jonathan Wakely
 
@@ -1611,20 +1611,20 @@ namespace redi
 
   /** @return @c *this */
   template <typename C, typename T>
-    inline basic_rpstream<C,T>&
+    inline basic_rpstream<C,T>::istream_type&
     basic_rpstream<C,T>::out()
     {
       buf_.read_err(false);
-      return *this;
+      return istream_;
     }
 
   /** @return @c *this */
   template <typename C, typename T>
-    inline basic_rpstream<C,T>&
+    inline basic_rpstream<C,T>::istream_type&
     basic_rpstream<C,T>::err()
     {
       buf_.read_err(true);
-      return *this;
+      return istream_;
     }
 #endif  // RPSTREAM
 
