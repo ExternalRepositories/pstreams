@@ -1,6 +1,6 @@
-/* $Id: pstream.h,v 1.17.2.4 2002/01/27 16:40:27 redi Exp $
+/* $Id: pstream.h,v 1.17.2.5 2002/01/27 19:16:38 redi Exp $
 PStreams - POSIX Process I/O for C++
-Copyright (C) 2001-2002 Jonathan Wakely
+Copyright (C) 2001,2002 Jonathan Wakely
 
 This file is part of PStreams.
 
@@ -870,7 +870,8 @@ namespace redi
   /**
    * Attempts to make @a c available as the next character to be read by
    * @c this->sgetc(), or if @a c is equal to @c traits_type::eof() then
-   * the previous character in the sequence is made the next available ???
+   * the previous character in the sequence is made the next available
+   * (at least, I think that's the intention?!)
    *
    * @param c a character to make available for extraction.
    * @return @a c if the character can be made available, @c traits_type::eof()
@@ -909,7 +910,6 @@ namespace redi
     {
       if (wpipe() >= 0)
       {
-        // TODO - use codecvt<> facet
         return (::write(wpipe(), &c, sizeof(char_type)) == sizeof(char_type));
       }
       return false;
@@ -930,7 +930,6 @@ namespace redi
     {
       if (rpipe() >= 0)
       {
-        // TODO - use codecvt<> facet
         return (::read(rpipe(), &c, sizeof(char_type)) == sizeof(char_type));
       }
       return false;
