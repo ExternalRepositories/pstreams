@@ -1,4 +1,4 @@
-/* $Id: pstream.h,v 1.17.2.7 2002/01/27 20:58:31 redi Exp $
+/* $Id: pstream.h,v 1.17.2.8 2002/01/28 02:42:56 redi Exp $
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001,2002 Jonathan Wakely
 
@@ -58,10 +58,16 @@ namespace redi
     class basic_pstreambuf : public std::basic_streambuf<CharT, Traits>
     {
     public:
+      /// Type definitions for dependent types
+      typedef CharT                             char_type;
+      typedef Traits                            traits_type;
+      typedef typename traits_type::int_type    int_type;
+      typedef typename traits_type::off_type    off_type;
+      typedef typename traits_type::pos_type    pos_type;
       /// Type used for file descriptors
-      typedef int                     fd_t;
+      typedef int                               fd_t;
       /// Type used to specify how to connect to the process
-      typedef std::ios_base::openmode pmode;
+      typedef std::ios_base::openmode           pmode;
 
       static const pmode pstdout = std::ios_base::out; ///< Write to stdin
       static const pmode pstdin  = std::ios_base::in;  ///< Read from stdout
@@ -124,6 +130,7 @@ namespace redi
       bool
       read(char_type& c);
 
+#if 0
       /// Insert a sequence of characters into the pipe.
       std::streamsize
       write(char_type* s, std::streamsize n);
@@ -131,6 +138,7 @@ namespace redi
       /// Extract a sequence of characters from the pipe.
       std::streamsize
       read(char_type* s, std::streamsize n);
+#endif
 
     private:
       basic_pstreambuf(const basic_pstreambuf&);
@@ -176,7 +184,7 @@ namespace redi
     {
       typedef std::basic_istream<CharT, Traits>     istream_type;
       typedef basic_pstreambuf<CharT, Traits>       streambuf_type;
-      typedef streambuf_type::pmode                 pmode;
+      typedef typename streambuf_type::pmode        pmode;
 
     public:
       /// Default constructor.
@@ -223,7 +231,7 @@ namespace redi
     {
       typedef std::basic_ostream<CharT, Traits>     ostream_type;
       typedef basic_pstreambuf<CharT, Traits>       streambuf_type;
-      typedef streambuf_type::pmode                 pmode;
+      typedef typename streambuf_type::pmode        pmode;
 
     public:
       /// Default constructor.
@@ -278,7 +286,7 @@ namespace redi
     {
       typedef std::basic_iostream<CharT, Traits>    iostream_type;
       typedef basic_pstreambuf<CharT, Traits>       streambuf_type;
-      typedef streambuf_type::pmode                 pmode;
+      typedef typename streambuf_type::pmode        pmode;
 
     public:
       /// Default constructor.
@@ -1001,7 +1009,7 @@ namespace redi
 
   /** @return a reference to the output file descriptor */
   template <typename C, typename T>
-    inline basic_pstreambuf<C,T>::fd_t&
+    inline typename basic_pstreambuf<C,T>::fd_t&
     basic_pstreambuf<C,T>::wpipe()
     {
       return wpipe_;
@@ -1009,7 +1017,7 @@ namespace redi
 
   /** @return a reference to the active input file descriptor */
   template <typename C, typename T>
-    inline basic_pstreambuf<C,T>::fd_t&
+    inline typename basic_pstreambuf<C,T>::fd_t&
     basic_pstreambuf<C,T>::rpipe()
     {
       return rpipe_[rsrc_];
@@ -1025,7 +1033,7 @@ namespace redi
 
   /** @return a reference to the active input character buffer */
   template <typename C, typename T>
-    inline basic_pstreambuf<C,T>::char_type&
+    inline typename basic_pstreambuf<C,T>::char_type&
     basic_pstreambuf<C,T>::char_buf()
     {
       return char_buf_[rsrc_];
