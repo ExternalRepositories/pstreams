@@ -1,4 +1,4 @@
-/* $Id: pstream.h,v 1.17.2.5 2002/01/27 19:16:38 redi Exp $
+/* $Id: pstream.h,v 1.17.2.6 2002/01/27 20:39:09 redi Exp $
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001,2002 Jonathan Wakely
 
@@ -979,7 +979,6 @@ namespace redi
     inline std::streamsize
     basic_pstreambuf<C,T>::write(char_type* s, std::streamsize n)
     {
-      // TODO - use codecvt<> facet
       return (wpipe() >= 0 ? ::write(wpipe(), s, n * sizeof(char_type)) : 0);
     }
 
@@ -996,7 +995,6 @@ namespace redi
     inline std::streamsize
     basic_pstreambuf<C,T>::read(char_type* s, std::streamsize n)
     {
-      // TODO - use codecvt<> facet
       return (rpipe() >= 0 ? ::read(rpipe(), s, n * sizeof(char_type)) : 0);
     }
 #endif
@@ -1455,6 +1453,8 @@ namespace redi
     }
 
 #ifdef RPSTREAM
+  // TODO document RPSTREAMS better
+
   // member definitions for basic_rpstream
 
   /**
@@ -1624,22 +1624,10 @@ namespace redi
 
 } // namespace redi
 
-/*
- * rest of file contains additional doxygen comments...
- */
-
 /**
- * @def PSTREAMS_VERSION
- * The value is @c ((major*0xff)+minor), where @c major is the number to
- * the left of the decimal point and @c minor is the number to the right.
- */
-
-/**
- * @mainpage
+ * @mainpage Pstreams Library
  * @htmlinclude pstreams.html
  */
-// TODO don't use @htmlinclude here, 
-
 
 #endif  // REDI_PSTREAM_H
 
