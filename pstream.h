@@ -1,4 +1,4 @@
-/* $Id: pstream.h,v 1.17.2.1 2002/01/27 13:32:04 redi Exp $
+/* $Id: pstream.h,v 1.17.2.2 2002/01/27 13:33:38 redi Exp $
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001-2002 Jonathan Wakely
 
@@ -297,7 +297,7 @@ namespace redi
 #ifdef RPSTREAM
   /// Class template for Restricted PStreams.
   template <typename CharT, typename Traits = std::char_traits<CharT> >
-    class basic_pstream
+    class basic_rpstream
     : public std::basic_ostream<CharT, Traits>
     {
       typedef std::basic_ostream<CharT, Traits>     ostream_type;
