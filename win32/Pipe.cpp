@@ -1,3 +1,4 @@
+/* $Id: Pipe.cpp,v 1.1.2.4 2004/10/01 07:06:10 francisandre Exp $ */
 #if defined(_WIN32) || defined(WIN32)
 	#define REDI_OS_WIN32
 	#ifndef WIN32
@@ -184,3 +185,9 @@ bool Pipe::valid(PipeSide ps) const {
 	else throw Exception("internal error");
 #endif
 }
+/*
+$Log: Pipe.cpp,v $
+Revision 1.1.2.4  2004/10/01 07:06:10  francisandre
+add RCS variables: $Id and $Log
+
+*/
