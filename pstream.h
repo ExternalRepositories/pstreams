@@ -1,4 +1,4 @@
-/* $Id: pstream.h,v 1.79.2.1 2004/09/30 12:04:03 francisandre Exp $
+/* $Id: pstream.h,v 1.79.2.2 2004/10/01 06:12:34 francisandre Exp $
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001,2002,2003,2004 Jonathan Wakely
 
@@ -42,16 +42,40 @@ along with PStreams; if not, write to the Free Software Foundation, Inc.,
 #include <cerrno>       // for errno
 #include <cstddef>      // for size_t
 #include <cstdlib>      // for exit()
-#include <sys/types.h>  // for pid_t
-#include <sys/wait.h>   // for waitpid()
-#include <unistd.h>     // for pipe() fork() exec() and filedes functions
-#include <signal.h>     // for kill()
+#include <assert.h>
+
+#if defined(_WIN32) || defined(WIN32)
+	#define OS_WIN32
+	#ifndef WIN32
+		#define WIN32
+	#endif
+#else
+	#define OS_UNIX
+#endif
+
+#if		defined(OS_UNIX)
+	#include <sys/types.h>  // for pid_t
+	#include <sys/wait.h>   // for waitpid()
+	#include <unistd.h>     // for pipe() fork() exec() and filedes functions
+	#include <signal.h>     // for kill()
+
+
+#elif	defined(OS_WIN32)
+	#include <win32/Process.h>
+	#include <win32/Program.h>
+	#include <win32/Pipe.h>
+
+	#include <io.h>
+	typedef int	pid_t;
+#endif
+
+
 #if REDI_EVISCERATE_PSTREAMS
 #include <stdio.h>       // for FILE, fdopen()
 #endif
 
 
-// The library version.
+/// The library version.
 #define PSTREAMS_VERSION 0x0031   // 0.49 (version 1.0 will be 0x0100)
 
 /**
@@ -132,9 +156,11 @@ namespace redi
       close();
 
       /// Send a signal to the process.
-      basic_pstreambuf*
-      kill(int signal = SIGTERM);
-
+#if		defined(OS_UNIX)
+	basic_pstreambuf*						kill(int signal = SIGTERM);
+#elif	defined(OS_WIN32)
+	basic_pstreambuf*						kill(int signal = 0);//FIXME 
+#endif
       /// Close the pipe connected to the process' stdin.
       void
       peof();
@@ -207,17 +233,30 @@ namespace redi
       wait(bool nohang = false);
 
       /// Return the file descriptor for the output pipe.
-      fd_type&
-      wpipe();
-
+#if		defined(OS_UNIX)
+	fd_type&
+	wpipe();
+#elif	defined(OS_WIN32)
+	Pipe&
+	wpipe();
+#endif
       /// Return the file descriptor for the active input pipe.
-      fd_type&
-      rpipe();
+#if		defined(OS_UNIX)
+	fd_type&
+	rpipe();
+#elif	defined(OS_WIN32)
+	Pipe&
+	rpipe();
+#endif
 
       /// Return the file descriptor for the specified input pipe.
-      fd_type&
-      rpipe(buf_read_src which);
-
+#if		defined(OS_UNIX)
+	fd_type&
+	rpipe(buf_read_src which);
+#elif	defined(OS_WIN32)
+	Pipe&
+	rpipe(buf_read_src which);
+#endif
       void
       create_buffers(pmode mode);
 
@@ -245,9 +284,22 @@ namespace redi
       void
       init_rbuffers();
 
+#if		defined(OS_UNIX)
       pid_t         ppid_;        // pid of process
       fd_type       wpipe_;       // pipe used to write to process' stdin
       fd_type       rpipe_[2];    // two pipes to read from, stdout and stderr
+#elif	defined(OS_WIN32)
+	  Process				process;
+	  // pipe for the child process's STDOUT. 
+	  Pipe				childstdout;
+	  // pipe for the child process's STDIN. 
+	  Pipe				childstdin;
+	  // pipe for the child process's STDERR.
+	  Pipe				childstderr;
+
+	  Pipe				wpipe_;
+	  Pipe				rpipe_[2];
+#endif
       char_type*    wbuffer_;
       char_type*    rbuffer_[2];
       char_type*    rbufstate_[3];
@@ -277,7 +329,7 @@ namespace redi
                       const argv_type& argv,
                       pmode mode );
 
-      /// Pure virtual destructor.
+    /// Pure virtual destructor.
       virtual
       ~pstream_common() = 0;
 
@@ -345,6 +397,7 @@ namespace redi
       /// Type used to hold the arguments for a command.
       typedef typename pbase_type::argv_type        argv_type;
 
+
       /// Default constructor, creates an uninitialised stream.
       basic_ipstream()
       : istream_type(NULL), pbase_type()
@@ -362,7 +415,9 @@ namespace redi
        */
       basic_ipstream(const std::string& command, pmode mode = std::ios_base::in)
       : istream_type(NULL), pbase_type(command, mode)
-      { }
+      { 
+		if  (mode & std::ios_base::binary)	unsetf(ios_base::skipws);
+	  }
 
       /**
        * @brief Constructor that initialises the stream by starting a process.
@@ -379,9 +434,11 @@ namespace redi
                       const argv_type& argv,
                       pmode mode = std::ios_base::in )
       : istream_type(NULL), pbase_type(file, argv, mode)
-      { }
+      {
+		if  (mode & std::ios_base::binary)	unsetf(ios_base::skipws);
+	  }
 
-      /**
+     /**
        * @brief Destructor.
        *
        * Closes the stream and waits for the child to exit.
@@ -492,7 +549,9 @@ namespace redi
       basic_opstream( const std::string& command,
                       pmode mode = std::ios_base::out )
       : ostream_type(NULL), pbase_type(command, mode)
-      { }
+      {
+		if  (mode & std::ios_base::binary)	unsetf(ios_base::skipws);
+	  }
 
       /**
        * @brief Constructor that initialises the stream by starting a process.
@@ -509,7 +568,9 @@ namespace redi
                       const argv_type& argv,
                       pmode mode = std::ios_base::out )
       : ostream_type(NULL), pbase_type(file, argv, mode)
-      { }
+      { 
+		if  (mode & std::ios_base::binary)	unsetf(ios_base::skipws);
+	  }
 
       /**
        * @brief Destructor
@@ -544,8 +605,7 @@ namespace redi
       {
         this->do_open(file, argv, mode);
       }
-    };
-
+	};
 
   /**
    * @class basic_pstream
@@ -595,7 +655,9 @@ namespace redi
       basic_pstream( const std::string& command,
                      pmode mode = std::ios_base::in|std::ios_base::out )
       : iostream_type(NULL), pbase_type(command, mode)
-      { }
+      {
+		if  (mode & std::ios_base::binary)	unsetf(ios_base::skipws);
+	  }
 
       /**
        * @brief Constructor that initialises the stream by starting a process.
@@ -612,7 +674,9 @@ namespace redi
                      const argv_type& argv,
                      pmode mode = std::ios_base::in|std::ios_base::out )
       : iostream_type(NULL), pbase_type(file, argv, mode)
-      { }
+      {
+		if  (mode & std::ios_base::binary)	unsetf(ios_base::skipws);
+	  }
 
       /**
        * @brief Destructor
@@ -731,7 +795,9 @@ namespace redi
       basic_rpstream( const std::string& command,
                       pmode mode = std::ios_base::in|std::ios_base::out )
       : ostream_type(NULL) , istream_type(NULL) , pbase_type(command, mode)
-      { }
+      {
+		if  (mode & std::ios_base::binary)	unsetf(ios_base::skipws);
+	  }
 
       /**
        * @brief  Constructor that initialises the stream by starting a process.
@@ -748,7 +814,9 @@ namespace redi
                       const argv_type& argv,
                       pmode mode = std::ios_base::in|std::ios_base::out )
       : ostream_type(NULL), istream_type(NULL), pbase_type(file, argv, mode)
-      { }
+      {
+		if  (mode & std::ios_base::binary)	unsetf(ios_base::skipws);
+	  }
 
       /// Destructor
       ~basic_rpstream() { }
@@ -863,9 +931,13 @@ namespace redi
   template <typename C, typename T>
     inline
     basic_pstreambuf<C,T>::basic_pstreambuf()
+#if		defined(OS_UNIX)
     : ppid_(-1)   // initialise to -1 to indicate no process run yet.
     , wpipe_(-1)
-    , wbuffer_(0)
+	, wbuffer_(0)
+#elif	defined(OS_WIN32)
+	: wbuffer_(0)
+#endif
     , rsrc_(rsrc_out)
     , status_(-1)
     , error_(0)
@@ -884,9 +956,13 @@ namespace redi
   template <typename C, typename T>
     inline
     basic_pstreambuf<C,T>::basic_pstreambuf(const std::string& command, pmode mode)
+#if		defined(OS_UNIX)
     : ppid_(-1)   // initialise to -1 to indicate no process run yet.
     , wpipe_(-1)
-    , wbuffer_(0)
+	, wbuffer_(0)
+#elif	defined(OS_WIN32)
+	: wbuffer_(0)
+#endif
     , rsrc_(rsrc_out)
     , status_(-1)
     , error_(0)
@@ -909,9 +985,13 @@ namespace redi
     basic_pstreambuf<C,T>::basic_pstreambuf( const std::string& file,
                                              const argv_type& argv,
                                              pmode mode )
+#if		defined(OS_UNIX)
     : ppid_(-1)   // initialise to -1 to indicate no process run yet.
     , wpipe_(-1)
     , wbuffer_(0)
+#elif	defined(OS_WIN32)
+    : wbuffer_(0)
+#endif
     , rsrc_(rsrc_out)
     , status_(-1)
     , error_(0)
@@ -951,7 +1031,8 @@ namespace redi
 
       if (!is_open())
       {
-        switch(fork(mode))
+#if		defined(OS_UNIX)
+		switch(fork(mode))
         {
           case 0 :
           {
@@ -977,6 +1058,23 @@ namespace redi
             ret = this;
           }
         }
+#elif	defined(OS_WIN32)
+		switch (fork(mode)) {
+			case 1:
+			default:
+			try {
+				process = Process(command, childstdin.in(), childstdout.out(), childstderr.out());
+				bool result = process.spawn();
+				if  (result) {
+					childstdout.closeWriteEndPoint();
+					create_buffers(mode);
+					ret = this;
+				}
+			} catch (exception&) {
+			} catch (...) {
+			}
+		}
+#endif
       }
       return ret;
     }
@@ -1006,6 +1104,7 @@ namespace redi
 
       if (!is_open())
       {
+#if		defined(OS_UNIX)
         switch(fork(mode))
         {
           case 0 :
@@ -1043,10 +1142,27 @@ namespace redi
             ret = this;
           }
         }
+#elif	defined(OS_WIN32)
+		switch (fork(mode)) {
+			case 1:
+			default:
+			try {
+				process = Process(file, childstdin.in(), childstdout.out(), childstderr.out());
+				process.addArgument(argv);
+				bool result = process.spawn();
+				if  (result) {
+					childstdout.closeWriteEndPoint();
+					create_buffers(mode);
+					ret = this;
+				}
+			} catch (exception&) {
+			} catch (...) {
+			}
+		}
+#endif
       }
       return ret;
     }
-
   /**
    * @brief  Helper function to close an array of file descriptors.
    *
@@ -1059,10 +1175,12 @@ namespace redi
   inline void
   close_fd_array(int* filedes, std::size_t count)
   {
+#if		defined(OS_UNIX)
     for (std::size_t i = 0; i < count; ++i)
       if (filedes[i] >= 0)
         if (::close(filedes[i]) == 0)
           filedes[i] = -1;
+#endif
   }
 
   /**
@@ -1090,6 +1208,7 @@ namespace redi
       // three pairs of file descriptors, for pipes connected to the
       // process' stdin, stdout and stderr
       // (stored in a single array so close_fd_array() can close all at once)
+#if		defined(OS_UNIX)
       fd_type fd[6] =  {-1, -1, -1, -1, -1, -1};
       fd_type* const pin = fd;
       fd_type* const pout = fd+2;
@@ -1187,6 +1306,33 @@ namespace redi
         // close any pipes we opened before failure
         close_fd_array(fd, 6);
       }
+#elif	defined(OS_WIN32)
+	childstdout.open();
+	childstderr.open();
+	childstdin.open();
+
+/*
+WARNING: this is a BIG HACK: With variable member rpipe_ & wpipe_, it DOES NOT work
+while with locals rpipe_ & wpipe_ then copied into this->rpipe_ & this->wpipe_,
+it WORKS!!!!!
+FIXME to be clarified later:))
+*/
+	Pipe pipereado = childstdout.toReadPipe();
+	pipereado.closeWriteEndPoint();
+
+	Pipe pipereade = childstderr.toReadPipe();
+	pipereade.closeWriteEndPoint();
+
+	Pipe wpipe_ = childstdin.toWritePipe();
+
+	this->rpipe_[rsrc_out]  = pipereado;
+	this->rpipe_[rsrc_err]  = pipereade;
+	this->wpipe_ = wpipe_;
+/*
+	END WARNING
+*/
+	pid = 1;
+#endif
       return pid;
     }
 
@@ -1211,8 +1357,14 @@ namespace redi
         destroy_buffers(pstdin|pstdout|pstderr);
 
         // close pipes before wait() so child gets EOF/SIGPIPE
+#if	defined(OS_UNIX)
         close_fd_array(&wpipe_, 1);
         close_fd_array(rpipe_, 2);
+#elif	defined(OS_WIN32)
+		wpipe_.close();
+		rpipe_[0].close();
+		rpipe_[1].close();
+#endif
 
         if (wait() == 1)
         {
@@ -1229,7 +1381,9 @@ namespace redi
     inline void
     basic_pstreambuf<C,T>::init_rbuffers()
     {
+#if		defined(OS_UNIX)
       rpipe_[rsrc_out] = rpipe_[rsrc_err] = -1;
+#endif
       rbuffer_[rsrc_out] = rbuffer_[rsrc_err] = 0;
       rbufstate_[0] = rbufstate_[1] = rbufstate_[2] = 0;
     }
@@ -1322,6 +1476,24 @@ namespace redi
       int exited = -1;
       if (is_open())
       {
+#if		defined(OS_UNIX)
+#ifdef	WHAT_UNIX_COULD_BE
+		switch(exited = process.wait(nohang ? WNOHANG : 0)) {
+			case Process::UNDEF:
+				error_ = process.getLastError();
+			break;
+			case Process::EXITED:
+				status_ = process.status();
+				exited = 1;
+				destroy_buffers(pstdin | pstdout | pstderr);
+				close_fd_array(&wpipe_, 1);
+				close_fd_array(rpipe_, 2);
+			break;
+			case Process::ALIVE:
+				exited = 0;
+			break;
+		}
+#else
         int status;
         switch(::waitpid(ppid_, &status, nohang ? WNOHANG : 0))
         {
@@ -1342,6 +1514,25 @@ namespace redi
             close_fd_array(rpipe_, 2);
             break;
         }
+#endif
+#else
+		switch(exited = process.wait()) {
+			case Process::UNDEF:
+				error_ = process.getLastError();
+			break;
+			case Process::EXITED:
+				status_ = process.status();
+				exited = 1;
+				destroy_buffers(pstdin | pstdout | pstderr);
+				wpipe_.close();
+				rpipe_[0].close();
+				rpipe_[1].close();
+			break;
+			case Process::ACTIVE:
+				exited = 0;
+			break;
+		}
+#endif
       }
       return exited;
     }
@@ -1363,6 +1554,12 @@ namespace redi
       basic_pstreambuf<C,T>* ret = NULL;
       if (is_open())
       {
+#if		defined(OS_UNIX)
+#ifdef	WHAT_UNIX_COULD_BE
+		if  (process.stop()) {
+			ret = this;
+		}
+#else
         if (::kill(ppid_, signal))
           error_ = errno;
         else
@@ -1370,6 +1567,12 @@ namespace redi
           // TODO call exited() to check for exit and clean up? leave to user?
           ret = this;
         }
+#endif
+#else
+		if  (process.stop()) {
+			ret = this;
+		}
+#endif
       }
       return ret;
     }
@@ -1382,7 +1585,11 @@ namespace redi
     inline bool
     basic_pstreambuf<C,T>::exited()
     {
+#if		defined(OS_UNIX)
       return ppid_ == 0 || wait(true)==1;
+#elif	defined(OS_WIN32)
+		return process.state() == Process::EXITED;
+#endif
     }
 
 
@@ -1418,7 +1625,11 @@ namespace redi
     {
       sync();
       destroy_buffers(pstdin);
+#if		defined(OS_UNIX)
       close_fd_array(&wpipe_, 1);
+#elif	defined(OS_WIN32)
+		wpipe_.close();
+#endif
     }
 
   /**
@@ -1435,7 +1646,11 @@ namespace redi
     inline bool
     basic_pstreambuf<C,T>::is_open() const
     {
+#if		defined(OS_UNIX)
       return ppid_ > 0;
+#elif	defined(OS_WIN32)
+	return process.active();
+#endif
     }
 
   /**
@@ -1451,7 +1666,11 @@ namespace redi
     basic_pstreambuf<C,T>::read_err(bool readerr)
     {
       buf_read_src src = readerr ? rsrc_err : rsrc_out;
+#if		defined(OS_UNIX)
       if (rpipe_[src]>=0)
+#elif	defined(OS_WIN32)
+	  if (rpipe_[src].valid(Pipe::ReadSide))
+#endif
       {
         switch_read_buffer(src);
         return true;
@@ -1522,7 +1741,7 @@ namespace redi
     bool
     basic_pstreambuf<C,T>::empty_buffer()
     {
-      const std::streamsize count = this->pptr() - this->pbase();
+	  const std::streamsize count = static_cast<std::streamsize>(this->pptr() - this->pbase());
       const std::streamsize written = this->write(this->wbuffer_, count);
       if (count > 0 && written == count)
       {
@@ -1580,7 +1799,7 @@ namespace redi
     bool
     basic_pstreambuf<C,T>::fill_buffer()
     {
-      const std::streamsize pb1 = this->gptr() - this->eback();
+	  const std::streamsize pb1 = static_cast<std::streamsize>(this->gptr() - this->eback());
       const std::streamsize pb2 = pbsz;
       const std::streamsize npb = std::min(pb1, pb2);
 
@@ -1617,8 +1836,12 @@ namespace redi
     inline std::streamsize
     basic_pstreambuf<C,T>::write(char_type* s, std::streamsize n)
     {
-      return wpipe() >= 0 ? ::write(wpipe(), s, n * sizeof(char_type)) : 0;
-    }
+#if		defined(OS_UNIX)
+		return wpipe() >= 0 ? ::write(wpipe(), s, n * sizeof(char_type)) : 0;
+#elif	defined(OS_WIN32)
+		return wpipe().valid(Pipe::WriteSide) ? wpipe().write(s, n * sizeof(char_type)) : 0;
+#endif
+	}
 
   /**
    * Reads up to @a n characters from the pipe to the buffer @a s.
@@ -1633,12 +1856,20 @@ namespace redi
     inline std::streamsize
     basic_pstreambuf<C,T>::read(char_type* s, std::streamsize n)
     {
+#if		defined(OS_UNIX)
       return rpipe() >= 0 ? ::read(rpipe(), s, n * sizeof(char_type)) : 0;
+#elif	defined(OS_WIN32)
+		return rpipe().valid(Pipe::ReadSide) ? rpipe().read(s, n * sizeof(char_type)) : 0;
+#endif
     }
 
   /** @return a reference to the output file descriptor */
   template <typename C, typename T>
+#if		defined(OS_UNIX)
     inline typename basic_pstreambuf<C,T>::fd_type&
+#elif	defined(OS_WIN32)
+    Pipe&
+#endif
     basic_pstreambuf<C,T>::wpipe()
     {
       return wpipe_;
@@ -1646,7 +1877,11 @@ namespace redi
 
   /** @return a reference to the active input file descriptor */
   template <typename C, typename T>
+#if		defined(OS_UNIX)
     inline typename basic_pstreambuf<C,T>::fd_type&
+#elif	defined(OS_WIN32)
+    Pipe&
+#endif
     basic_pstreambuf<C,T>::rpipe()
     {
       return rpipe_[rsrc_];
@@ -1654,7 +1889,11 @@ namespace redi
 
   /** @return a reference to the specified input file descriptor */
   template <typename C, typename T>
+#if		defined(OS_UNIX)
     inline typename basic_pstreambuf<C,T>::fd_type&
+#elif	defined(OS_WIN32)
+    Pipe&
+#endif
     basic_pstreambuf<C,T>::rpipe(buf_read_src which)
     {
       return rpipe_[which];
@@ -1733,6 +1972,7 @@ namespace redi
       do_open(file, argv, mode);
     }
 
+	
   /**
    * This is a pure virtual function to make @c pstream_common abstract.
    * Because it is the destructor it will be called by derived classes
@@ -1857,6 +2097,7 @@ namespace redi
     {
       in = out = err = NULL;
       std::size_t open_files = 0;
+#if		defined(OS_UNIX)
       if (wpipe() > -1)
       {
         if ((in = ::fdopen(wpipe(), "w")))
@@ -1878,6 +2119,23 @@ namespace redi
             open_files |= pstderr;
         }
       }
+#elif	defined(OS_WIN32)
+	if (wpipe().valid()) {
+		if (in = ::fdopen(wpipe(), "w")) {
+			open_files |= pstdin;
+		}
+	}
+	if (rpipe(rsrc_out).valid()) {
+		if (out = ::fdopen(rpipe(rsrc_out), "r")) {
+			open_files |= pstdout;
+		}
+	}
+	if (rpipe(rsrc_err).valid()) {
+		if (err = ::fdopen(rpipe(rsrc_err), "r")) {
+			open_files |= pstderr;
+		}
+	}
+#endif
       return open_files;
     }
 
@@ -1902,7 +2160,6 @@ namespace redi
 
 
 } // namespace redi
-
 /**
  * @mainpage PStreams Reference
  * @htmlinclude mainpage.html
@@ -1911,4 +2168,3 @@ namespace redi
 #endif  // REDI_PSTREAM_H_SEEN
 
 // vim: ts=2 sw=2 expandtab
-
