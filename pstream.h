@@ -1,4 +1,4 @@
-/* $Id: pstream.h,v 1.17.2.8 2002/01/28 02:42:56 redi Exp $
+/* $Id: pstream.h,v 1.17.2.9 2002/04/20 15:15:20 redi Exp $
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001,2002 Jonathan Wakely
 
@@ -69,8 +69,8 @@ namespace redi
       /// Type used to specify how to connect to the process
       typedef std::ios_base::openmode           pmode;
 
-      static const pmode pstdout = std::ios_base::out; ///< Write to stdin
-      static const pmode pstdin  = std::ios_base::in;  ///< Read from stdout
+      static const pmode pstdin  = std::ios_base::out; ///< Write to stdin
+      static const pmode pstdout = std::ios_base::in;  ///< Read from stdout
       static const pmode pstderr = std::ios_base::app; ///< Read from stderr
 
       /// Default constructor.
