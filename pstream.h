@@ -1,4 +1,4 @@
-/* $Id: pstream.h,v 1.17.4.3 2003/03/11 01:59:42 redi Exp $
+/* $Id: pstream.h,v 1.17.4.4 2003/03/11 02:03:37 redi Exp $
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001-2002 Jonathan Wakely
 
@@ -54,10 +54,6 @@ along with PStreams; if not, write to the Free Software Foundation, Inc.,
 #include <string>
 #include <cstdio>
 #include <cerrno>
-
-// TODO add buffering to pstreambuf
-
-// TODO replace popen() with handrolled version
 
 
 /// All PStreams classes are declared in namespace redi.
