@@ -1,5 +1,5 @@
 /*
-$Id: echos.cpp,v 1.1.2.2 2004/10/01 07:08:43 francisandre Exp $
+$Id: echos.cpp,v 1.1.2.3 2004/11/08 15:32:18 francisandre Exp $
 */
 #include <iostream>
 #include <fcntl.h>
@@ -65,6 +65,7 @@ int main(int argc, char* argv[], char* env[]) {
 		}
 
 		cin.unsetf(ios::skipws);
+		cout.unsetf(ios::skipws);
 
 		if  (*mode == 'i') {
 			unsigned char c;
