@@ -1,4 +1,4 @@
-/* $Id: pstream.h,v 1.79.2.3 2004/10/01 07:02:48 francisandre Exp $
+/* $Id: pstream.h,v 1.79.2.4 2005/04/06 15:32:36 francisandre Exp $
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001,2002,2003,2004 Jonathan Wakely
 
@@ -1146,8 +1146,7 @@ namespace redi
 			case 1:
 			default:
 			try {
-				process = Process(file, childstdin.in(), childstdout.out(), childstderr.out());
-				process.addArgument(argv);
+				process = Process(file, argv, childstdin.in(), childstdout.out(), childstderr.out());
 				bool result = process.spawn();
 				if  (result) {
 					childstdout.closeWriteEndPoint();
