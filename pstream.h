@@ -1,4 +1,4 @@
-/* $Id: pstream.h,v 1.17.2.11 2002/04/20 20:08:10 redi Exp $
+/* $Id: pstream.h,v 1.17.2.12 2002/04/20 20:11:21 redi Exp $
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001,2002 Jonathan Wakely
 
@@ -32,7 +32,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #define REDI_PSTREAM_H
 
 /// The library version.
-#define PSTREAMS_VERSION 0x0015   // 0.21
+#define PSTREAMS_VERSION 0x0016   // 0.22
 
 #include <ios>
 #include <streambuf>
@@ -340,6 +340,7 @@ namespace redi
   template <typename CharT, typename Traits = std::char_traits<CharT> >
     class basic_rpstream
     : public std::basic_ostream<CharT, Traits>
+    , private std::basic_istream<CharT, Traits>
     {
       typedef std::basic_ostream<CharT, Traits>     ostream_type;
       typedef std::basic_istream<CharT, Traits>     istream_type;
@@ -390,7 +391,6 @@ namespace redi
     private:
       std::string       command_;
       streambuf_type    buf_;
-      istream_type      istream_;
     };
 #endif
 
@@ -1490,12 +1490,11 @@ namespace redi
   template <typename C, typename T>
     basic_rpstream<C,T>::basic_rpstream()
     : ostream_type(NULL)
-    , istream_(NULL)
+    , istream_type(NULL)
     , command_()
     , buf_()
     {
-      this->ostream_type::init(&buf_);
-      istream_.init(&buf_);
+      this->init(&buf_);  // calls shared basic_ios virtual base class
     }
 
   /**
@@ -1509,12 +1508,11 @@ namespace redi
   template <typename C, typename T>
     basic_rpstream<C,T>::basic_rpstream(const std::string& command, pmode mode)
     : ostream_type(NULL)
-    , istream_(NULL)
+    , istream_type(NULL)
     , command_(command)
     , buf_()
     {
-      this->ostream_type::init(&buf_);
-      istream_.init(buf_);
+      this->init(&buf_);  // calls shared basic_ios virtual base class
       this->open(command_, mode);
     }
 
@@ -1531,12 +1529,11 @@ namespace redi
     inline
     basic_rpstream<C,T>::basic_rpstream(const std::string& file, const std::vector<std::string>& argv, pmode mode)
     : ostream_type(NULL)
-    , istream_(NULL)
+    , istream_type(NULL)
     , command_(file)
     , buf_()
     {
-      this->init(&buf_);
-      istream_.init(buf_);
+      this->init(&buf_);  // calls shared basic_ios virtual base class
       this->open(file, argv, mode);
     }
 
@@ -1554,7 +1551,6 @@ namespace redi
       if (!buf_.open((command_=command), mode))
       {
         this->setstate(std::ios_base::failbit);
-        istream_.setstate(std::ios_base::failbit);
       }
     }
 
@@ -1574,7 +1570,6 @@ namespace redi
       if (!buf_.open((command_=file), argv, mode))
       {
         this->setstate(std::ios_base::failbit);
-        istream_.setstate(std::ios_base::failbit);
       }
     }
 
@@ -1586,7 +1581,6 @@ namespace redi
       if (!buf_.close())
       {
         this->setstate(std::ios_base::failbit);
-        istream_.setstate(std::ios_base::failbit);
       }
     }
 
@@ -1615,7 +1609,7 @@ namespace redi
     basic_rpstream<C,T>::out()
     {
       buf_.read_err(false);
-      return istream_;
+      return *this;
     }
 
   /** @return @c *this */
@@ -1624,7 +1618,7 @@ namespace redi
     basic_rpstream<C,T>::err()
     {
       buf_.read_err(true);
-      return istream_;
+      return *this;
     }
 #endif  // RPSTREAM
 
