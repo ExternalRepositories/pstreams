@@ -1,4 +1,4 @@
-/* $Id: pstream.h,v 1.17.2.2 2002/01/27 13:33:38 redi Exp $
+/* $Id: pstream.h,v 1.17.2.3 2002/01/27 16:38:13 redi Exp $
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001-2002 Jonathan Wakely
 
@@ -32,7 +32,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #define REDI_PSTREAM_H
 
 /// The library version.
-#define PSTREAMS_VERSION 0x0014   // 0.20
+#define PSTREAMS_VERSION 0x0015   // 0.21
 
 #include <ios>
 #include <streambuf>
@@ -40,6 +40,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <ostream>
 #include <iostream>
 #include <string>
+#include <vector>
 #include <cerrno>
 #include <sys/types.h>  // for pid_t
 #include <sys/wait.h>   // for waitpid()
@@ -69,15 +70,22 @@ namespace redi
       /// Default constructor.
       basic_pstreambuf();
 
-      /// Constructor that initialises the buffer.
+      /// Constructor that initialises the buffer with @a command.
       basic_pstreambuf(const std::string& command, pmode mode);
+
+      /// Constructor that initialises the buffer with @a file and @a argv..
+      basic_pstreambuf(const std::string& file, const std::vector<std::string>& argv, pmode mode);
 
       /// Destructor.
       ~basic_pstreambuf();
 
-      /// Initialise the stream buffer.
+      /// Initialise the stream buffer with @a command.
       basic_pstreambuf*
       open(const std::string& command, pmode mode);
+
+      /// Initialise the stream buffer with @a file and @a argv.
+      basic_pstreambuf*
+      open(const std::string& file, const std::vector<std::string>& argv, pmode mode);
 
       /// Close the stream buffer.
       basic_pstreambuf*
@@ -128,6 +136,10 @@ namespace redi
       basic_pstreambuf(const basic_pstreambuf&);
       basic_pstreambuf& operator=(const basic_pstreambuf&);
 
+      /// Initialise pipes and fork process.
+      pid_t
+      fork(pmode mode);
+
       /// Return the file descriptor for the output pipe;
       fd_t&
       wpipe();
@@ -173,12 +185,19 @@ namespace redi
       /// Constructor that initialises the stream by starting a process.
       basic_ipstream(const std::string& command, pmode mode = std::ios_base::in);
 
+      /// Constructor that initialises the stream by starting a process.
+      basic_ipstream(const std::string& file, const std::vector<std::string>& argv, pmode mode = std::ios_base::in);
+
       /// Destructor
       ~basic_ipstream() { }
 
       /// Start a process.
       void
       open(const std::string& command, pmode mode = std::ios_base::in);
+
+      /// Start a process.
+      void
+      open(const std::string& file, const std::vector<std::string>& argv, pmode mode = std::ios_base::in);
 
       /// Close the pipe.
       void
@@ -213,12 +232,19 @@ namespace redi
       /// Constructor that initialises the stream by starting a process.
       basic_opstream(const std::string& command, pmode mode = std::ios_base::out);
 
+      /// Constructor that initialises the stream by starting a process.
+      basic_opstream(const std::string& file, const std::vector<std::string>& argv, pmode mode = std::ios_base::out);
+
       /// Destructor
       ~basic_opstream() { }
 
       /// Start a process.
       void
       open(const std::string& command, pmode mode = std::ios_base::out);
+
+      /// Start a process.
+      void
+      open(const std::string& file, const std::vector<std::string>& argv, pmode mode = std::ios_base::out);
 
       /// Close the pipe.
       void
@@ -261,12 +287,19 @@ namespace redi
       /// Constructor that initialises the stream by starting a process.
       basic_pstream(const std::string& command, pmode mode = std::ios_base::in|std::ios_base::out);
 
+      /// Constructor that initialises the stream by starting a process.
+      basic_pstream(const std::string& file, const std::vector<std::string>& argv, pmode mode = std::ios_base::in|std::ios_base::out);
+
       /// Destructor
       ~basic_pstream() { }
 
       /// Start a process.
       void
       open(const std::string& command, pmode mode = std::ios_base::in|std::ios_base::out);
+
+      /// Start a process.
+      void
+      open(const std::string& file, const std::vector<std::string>& argv, pmode mode = std::ios_base::in|std::ios_base::out);
 
       /// Close the pipe.
       void
@@ -312,12 +345,19 @@ namespace redi
       /// Constructor that initialises the stream by starting a process.
       basic_rpstream(const std::string& command, pmode mode = std::ios_base::in|std::ios_base::out);
 
+      /// Constructor that initialises the stream by starting a process.
+      basic_rpstream(const std::string& file, const std::vector<std::string>& argv, pmode mode = std::ios_base::in|std::ios_base::out);
+
       /// Destructor
       ~basic_rpstream() { }
 
       /// Start a process.
       void
       open(const std::string& command, pmode mode = std::ios_base::in|std::ios_base::out);
+
+      /// Start a process.
+      void
+      open(const std::string& file, const std::vector<std::string>& argv, pmode mode = std::ios_base::in|std::ios_base::out);
 
       /// Close the pipe.
       void
@@ -402,6 +442,27 @@ namespace redi
     }
 
   /**
+   * Initialises the stream buffer by calling open() with the supplied
+   * arguments.
+   *
+   * @param file a string containing the name of a program to execute.
+   * @param argv a vector of argument strings passsed to the new program.
+   * @param mode the I/O mode to use when opening the pipe.
+   * @see open()
+   */
+  template <typename C, typename T>
+    inline
+    basic_pstreambuf<C,T>::basic_pstreambuf(const std::string& file, const std::vector<std::string>& argv, pmode mode)
+    : ppid_(0)
+    , wpipe_(-1)
+    , rsrc_(rsrc_out)
+    {
+      rpipe_[rsrc_out] = rpipe_[rsrc_err] = -1;
+      take_from_buf_[rsrc_out] = take_from_buf_[rsrc_err] = false;
+      this->open(command, argv, mode);
+    }
+
+  /**
    * Closes the stream by calling close().
    * @see close()
    */
@@ -414,7 +475,7 @@ namespace redi
 
   /**
    * Starts a new process by passing @a command to the shell
-   * and opens a pipe to the process with the specified @a mode.
+   * and opens pipes to the process with the specified @a mode.
    * There is no way to tell whether the shell command succeeded, this
    * function will always succeed unless resource limits (such as
    * memory usage, or number of processes or open files) are exceeded.
@@ -422,7 +483,7 @@ namespace redi
    * @param command a string containing a shell command.
    * @param mode a bitwise OR of one or more of @c out, @c in and @c err.
    * @return NULL if the shell could not be started or the
-   * pipe could not be opened, pointer to self otherwise.
+   * pipes could not be opened, pointer to self otherwise.
    */
   template <typename C, typename T>
     inline basic_pstreambuf<C,T>*
@@ -432,119 +493,215 @@ namespace redi
 
       if (!this->is_open())
       {
-        // three pairs of file descriptors, for pipes connected to the
-        // process' stdin, stdout and stderr
-        // (stored in a single array so fdclose() can close all at once)
-        fd_t fd[6] =  {-1, -1, -1, -1, -1, -1};
-        fd_t* pin = fd;
-        fd_t* pout = fd+2;
-        fd_t* perr = fd+4;
-
-        // constants for read/write ends of pipe
-        const int RD = 0;
-        const int WR = 1;
-
-        // N.B.
-        // For the pstreambuf pin is an output stream and
-        // pout and perr are input streams.
-
-        if ( (mode&pstdout && ::pipe(pin)==0)
-            || (mode&pstdin && ::pipe(pout)==0)
-            || (mode&pstderr && ::pipe(perr)==0) )
+        switch(this->fork(mode))
         {
-          pid_t pid = ::fork();
-
-          switch (pid)
+          case 0 :
           {
-            case 0 :
-            {
-              // this is the new process
+            // this is the new process, exec command
+            ::execlp("sh", "sh", "-c", command.c_str(), 0);
 
-              // for each open pipe close one end and redirect the
-              // respective standard stream to the other end
+            // can only reach this point if exec() failed
+            int error = errno;
+            std::cerr << "sh: " << strerror(error) << '\n';
 
-              if (*pin >= 0)
-              {
-                ::close(pin[WR]);
-                ::dup2(pin[RD], STDIN_FILENO)>=0;
-              }
-              if (*pout >= 0)
-              {
-                ::close(pout[RD]);
-                ::dup2(pout[WR], STDOUT_FILENO);
-              }
-              if (*perr >= 0)
-              {
-                ::close(perr[RD]);
-                ::dup2(perr[WR], STDERR_FILENO);
-              }
-
-              const char* sh_path = "/bin/sh";
-              ::execl(sh_path, "sh", "-c", command.c_str(), 0);
-
-              // can only reach this point if exec() failed
-
-              int error = errno;
-              std::cerr << sh_path << ": " << strerror(error) << '\n';
-
-              // close any pipes we opened before failure
-              basic_pstreambuf<C,T>::fdclose(fd, 6);
-
-              // parent can get exit code from waitpid()
-              std::exit(error);
-            }
-            case -1 :
-            {
-              int error = errno;
-              std::cerr << "Cannot fork: " << strerror(error) << '\n';
-              // couldn't fork for some reason, close any open pipes
-              basic_pstreambuf<C,T>::fdclose(fd, 6);
-              break;
-            }
-            default :
-            {
-              // this is the parent process, store process' pid
-              ppid_ = pid;
-
-              // store one end of open pipes and close other end
-              if (*pin >= 0)
-              {
-                wpipe_ = pin[WR];
-                ::close(pin[RD]);
-              }
-              if (*pout >= 0)
-              {
-                rpipe_[rsrc_out] = pout[RD];
-                ::close(pout[WR]);
-              }
-              if (*perr >= 0)
-              {
-                rpipe_[rsrc_err] = perr[RD];
-                ::close(perr[WR]);
-              }
-
-              if (rpipe_[rsrc_out] == -1 && rpipe_[rsrc_err] >= 0)
-              {
-                // reading stderr but not stdout, so use stderr for all reads
-                this->read_err(true);
-              }
-
-              if (this->is_open()) // should be true now
-                ret = this;
-            }
+            // parent can get exit code from waitpid()
+            std::exit(error);
           }
-        }
-        else
-        {
-          //int error = errno;
-
-          // TODO report error to cerr ?
-
-          // close any pipes we opened before failure
-          basic_pstreambuf<C,T>::fdclose(fd, 6);
+          case -1 :
+          {
+            // couldn't fork, error already handled
+            break;
+          }
+          default :
+          {
+            // this is the parent process
+            if (this->is_open()) // should be true now
+              ret = this;
+          }
         }
       }
       return ret;
+    }
+
+
+  /**
+   * Starts a new process by executing @a file with the arguments in
+   * @a argv and opens pipes to the process with the specified @a mode.
+   * By convention argv[0] should be the file name of the file being executed.
+   * Will duplicate the actions of  the  shell  in searching for an
+   * executable file if the specified file name does not contain a slash (/)
+   * character.
+   *
+   * @param file a string containing the pathname of a program to execute.
+   * @param argv a vector of argument strings passed to the new program.
+   * @param mode a bitwise OR of one or more of @c out, @c in and @c err.
+   * @return NULL if the program could not be executed or the
+   * pipes could not be opened, pointer to self otherwise.
+   * @see execvp()
+   */
+  template <typename C, typename T>
+    inline basic_pstreambuf<C,T>*
+    basic_pstreambuf<C,T>::open(const std::string& file, const std::vector<std::string>& argv, pmode mode)
+    {
+      basic_pstreambuf<C,T>* ret = NULL;
+
+      if (!this->is_open())
+      {
+        switch(this->fork(mode))
+        {
+          case 0 :
+          {
+            // this is the new process, exec command
+
+            char** arg_v = new char*[argv.size()+1];
+            for (size_t i = 0; i < argv.size(); ++i)
+            {
+#if 0
+              arg_v[i] = new char[argv[i].size()+1];
+              argv[i].copy(arg_v[i], std::string::npos);
+              arg_v[i][argv[i].size()] = 0;
+#else
+              arg_v[i] = argv[i].c_str();
+#endif
+            }
+            arg_v[argv.size()] = 0;
+
+            ::execvp(file.c_str(), arg_v);
+
+            // can only reach this point if exec() failed
+            int error = errno;
+            std::cerr << file << ": " << strerror(error) << '\n';
+
+            // parent can get exit code from waitpid()
+            std::exit(error);
+          }
+          case -1 :
+          {
+            // couldn't fork, error already handled
+            break;
+          }
+          default :
+          {
+            // this is the parent process
+            if (this->is_open()) // should be true now
+              ret = this;
+          }
+        }
+      }
+      return ret;
+    }
+
+  /**
+   * Creates pipes as specified by @a mode and calls @c fork() to create
+   * a new process. If the fork is successful the parent process stores
+   * the child's PID and the opened pipes and the child process replaces
+   * its standard streams with the opeoened pipes.
+   *
+   * @param mode a pmode specifying which of the child's standard streams
+   * to connect to.
+   * @return -1 on failure, otherwise the PID of the child in the parent's
+   * context, 0 in the child's context.
+   */
+  template <typename C, typename T>
+    pid_t
+    basic_pstreambuf<C,T>::fork(pmode mode)
+    {
+      pid_t pid = -1;
+
+      // three pairs of file descriptors, for pipes connected to the
+      // process' stdin, stdout and stderr
+      // (stored in a single array so fdclose() can close all at once)
+      fd_t fd[6] =  {-1, -1, -1, -1, -1, -1};
+      fd_t* pin = fd;
+      fd_t* pout = fd+2;
+      fd_t* perr = fd+4;
+
+      // constants for read/write ends of pipe
+      const int RD = 0;
+      const int WR = 1;
+
+      // N.B.
+      // For the pstreambuf pin is an output stream and
+      // pout and perr are input streams.
+
+      if ( (mode&pstdout && ::pipe(pin)==0)
+          || (mode&pstdin && ::pipe(pout)==0)
+          || (mode&pstderr && ::pipe(perr)==0) )
+      {
+        pid = ::fork();
+        int error = errno;
+        switch (pid)
+        {
+          case 0 :
+          {
+            // this is the new process
+
+            // for each open pipe close one end and redirect the
+            // respective standard stream to the other end
+
+            if (*pin >= 0)
+            {
+              ::close(pin[WR]);
+              ::dup2(pin[RD], STDIN_FILENO)>=0;
+            }
+            if (*pout >= 0)
+            {
+              ::close(pout[RD]);
+              ::dup2(pout[WR], STDOUT_FILENO);
+            }
+            if (*perr >= 0)
+            {
+              ::close(perr[RD]);
+              ::dup2(perr[WR], STDERR_FILENO);
+            }
+            break;
+          }
+          case -1 :
+          {
+            std::cerr << "Cannot fork: " << strerror(error) << '\n';
+            // couldn't fork for some reason, close any open pipes
+            basic_pstreambuf<C,T>::fdclose(fd, 6);
+            break;
+          }
+          default :
+          {
+            // this is the parent process, store process' pid
+            ppid_ = pid;
+
+            // store one end of open pipes and close other end
+            if (*pin >= 0)
+            {
+              wpipe_ = pin[WR];
+              ::close(pin[RD]);
+            }
+            if (*pout >= 0)
+            {
+              rpipe_[rsrc_out] = pout[RD];
+              ::close(pout[WR]);
+            }
+            if (*perr >= 0)
+            {
+              rpipe_[rsrc_err] = perr[RD];
+              ::close(perr[WR]);
+            }
+
+            if (rpipe_[rsrc_out] == -1 && rpipe_[rsrc_err] >= 0)
+            {
+              // reading stderr but not stdout, so use stderr for all reads
+              this->read_err(true);
+            }
+          }
+        }
+      }
+      else
+      {
+        //int error = errno;
+        // TODO report error to cerr ?
+
+        // close any pipes we opened before failure
+        basic_pstreambuf<C,T>::fdclose(fd, 6);
+      }
+      return pid;
     }
 
   /**
@@ -585,7 +742,7 @@ namespace redi
     inline bool
     basic_pstreambuf<C,T>::is_open() const
     {
-      return bool(ppid_);
+      return bool(ppid_>0);
       //return (wpipe_>=0 || rpipe_[rsrc_out]>=0 || rpipe_[rsrc_err]>=0);
     }
 
@@ -892,6 +1049,7 @@ namespace redi
           ::close(filedes[i]);
     }
 
+
   // member definitions for basic_ipstream
 
   /**
@@ -912,7 +1070,7 @@ namespace redi
     {
       this->init(&buf_);
     }
-    
+
   /**
    * Initialises the stream buffer by calling open() with the supplied
    * arguments.
@@ -931,6 +1089,26 @@ namespace redi
       this->init(&buf_);
       this->open(command_, mode);
     }
+   
+  /**
+   * Initialises the stream buffer by calling open() with the supplied
+   * arguments.
+   *
+   * @param file a string containing the pathname of a program to execute.
+   * @param argv a vector of argument strings passed to the new program.
+   * @param mode the I/O mode to use when opening the pipe.
+   * @see open()
+   */
+  template <typename C, typename T>
+    inline
+    basic_ipstream<C,T>::basic_ipstream(const std::string& file, const std::vector<std::string>& argv, pmode mode)
+    : istream_type(NULL)
+    , command_(file)
+    , buf_()
+    {
+      this->init(&buf_);
+      this->open(file, argv, mode);
+    }
 
   /**
    * Starts a new process by passing @a command to the shell and
@@ -945,6 +1123,23 @@ namespace redi
     basic_ipstream<C,T>::open(const std::string& command, pmode mode)
     {
       if (!buf_.open((command_=command), (mode|std::ios_base::in)))
+        this->setstate(std::ios_base::failbit);
+    }
+
+  /**
+   * Starts a new process by executing @a file with the arguments in
+   * @a argv and opens pipes to the process as given by @a mode.
+   *
+   * @param file a string containing the pathname of a program to execute.
+   * @param argv a vector of argument strings passed to the new program.
+   * @param mode the I/O mode to use when opening the pipe.
+   * @see basic_pstreambuf::open()
+   */
+  template <typename C, typename T>
+    inline void
+    basic_ipstream<C,T>::open(const std::string& file, const std::vector<std::string>& argv, pmode mode)
+    {
+      if (!buf_.open((command_=file), argv, (mode|std::ios_base::in)))
         this->setstate(std::ios_base::failbit);
     }
 
@@ -1018,6 +1213,26 @@ namespace redi
     }
 
   /**
+   * Initialises the stream buffer by calling open() with the supplied
+   * arguments.
+   *
+   * @param file a string containing the pathname of a program to execute.
+   * @param argv a vector of argument strings passed to the new program.
+   * @param mode the I/O mode to use when opening the pipe.
+   * @see open()
+   */
+  template <typename C, typename T>
+    inline
+    basic_opstream<C,T>::basic_opstream(const std::string& file, const std::vector<std::string>& argv, pmode mode)
+    : ostream_type(NULL)
+    , command_(file)
+    , buf_()
+    {
+      this->init(&buf_);
+      this->open(file, argv, mode);
+    }
+
+  /**
    * Starts a new process by passing @a command to the shell
    * and opens a pipe to the process with the specified @a mode.
    *
@@ -1032,6 +1247,24 @@ namespace redi
       if (!buf_.open((command_=command), (mode|std::ios_base::out)))
         this->setstate(std::ios_base::failbit);
     }
+
+  /**
+   * Starts a new process by executing @a file with the arguments in
+   * @a argv and opens pipes to the process as given by @a mode.
+   *
+   * @param file a string containing the pathname of a program to execute.
+   * @param argv a vector of argument strings passed to the new program.
+   * @param mode the I/O mode to use when opening the pipe.
+   * @see basic_pstreambuf::open()
+   */
+  template <typename C, typename T>
+    inline void
+    basic_opstream<C,T>::open(const std::string& file, const std::vector<std::string>& argv, pmode mode)
+    {
+      if (!buf_.open((command_=file), argv, (mode|std::ios_base::out)))
+        this->setstate(std::ios_base::failbit);
+    }
+
 
   /** Waits for the associated process to finish and closes the pipe. */
   template <typename C, typename T>
@@ -1125,6 +1358,26 @@ namespace redi
     }
 
   /**
+   * Initialises the stream buffer by calling open() with the supplied
+   * arguments.
+   *
+   * @param file a string containing the pathname of a program to execute.
+   * @param argv a vector of argument strings passed to the new program.
+   * @param mode the I/O mode to use when opening the pipe.
+   * @see open()
+   */
+  template <typename C, typename T>
+    inline
+    basic_pstream<C,T>::basic_pstream(const std::string& file, const std::vector<std::string>& argv, pmode mode)
+    : iostream_type(NULL)
+    , command_(file)
+    , buf_()
+    {
+      this->init(&buf_);
+      this->open(file, argv, mode);
+    }
+
+  /**
    * Starts a new process by passing @a command to the shell
    * and opens a pipe to the process with the specified @a mode.
    * @param command a string containing a shell command.
@@ -1136,6 +1389,23 @@ namespace redi
     basic_pstream<C,T>::open(const std::string& command, pmode mode)
     {
       if (!buf_.open((command_=command), mode))
+        this->setstate(std::ios_base::failbit);
+    }
+
+  /**
+   * Starts a new process by executing @a file with the arguments in
+   * @a argv and opens pipes to the process as given by @a mode.
+   *
+   * @param file a string containing the pathname of a program to execute.
+   * @param argv a vector of argument strings passed to the new program.
+   * @param mode the I/O mode to use when opening the pipe.
+   * @see basic_pstreambuf::open()
+   */
+  template <typename C, typename T>
+    inline void
+    basic_pstream<C,T>::open(const std::string& file, const std::vector<std::string>& argv, pmode mode)
+    {
+      if (!buf_.open((command_=file), argv, mode))
         this->setstate(std::ios_base::failbit);
     }
 
@@ -1224,6 +1494,7 @@ namespace redi
   /**
    * Initialises the stream buffer by calling open() with the supplied
    * arguments.
+   *
    * @param command a string containing a shell command.
    * @param mode the I/O mode to use when opening the pipe.
    * @see open()
@@ -1238,6 +1509,28 @@ namespace redi
       this->ostream_type::init(&buf_);
       istream_.init(buf_);
       this->open(command_, mode);
+    }
+
+  /**
+   * Initialises the stream buffer by calling open() with the supplied
+   * arguments.
+   *
+   * @param file a string containing the pathname of a program to execute.
+   * @param argv a vector of argument strings passed to the new program.
+   * @param mode the I/O mode to use when opening the pipe.
+   * @see open()
+   */
+  template <typename C, typename T>
+    inline
+    basic_rpstream<C,T>::basic_rpstream(const std::string& file, const std::vector<std::string>& argv, pmode mode)
+    : ostream_type(NULL)
+    , istream_(NULL)
+    , command_(file)
+    , buf_()
+    {
+      this->init(&buf_);
+      istream_.init(buf_);
+      this->open(file, argv, mode);
     }
 
   /**
@@ -1258,7 +1551,27 @@ namespace redi
       }
     }
 
-  /** Waits for the associated process to finish and closes the pipe. */
+   /**
+   * Starts a new process by executing @a file with the arguments in
+   * @a argv and opens pipes to the process as given by @a mode.
+   *
+   * @param file a string containing the pathname of a program to execute.
+   * @param argv a vector of argument strings passed to the new program.
+   * @param mode the I/O mode to use when opening the pipe.
+   * @see basic_pstreambuf::open()
+   */
+  template <typename C, typename T>
+    inline void
+    basic_rpstream<C,T>::open(const std::string& file, const std::vector<std::string>& argv, pmode mode)
+    {
+      if (!buf_.open((command_=file), argv, mode))
+      {
+        this->setstate(std::ios_base::failbit);
+        istream_.setstate(std::ios_base::failbit);
+      }
+    }
+
+ /** Waits for the associated process to finish and closes the pipe. */
   template <typename C, typename T>
     inline void
     basic_rpstream<C,T>::close()
