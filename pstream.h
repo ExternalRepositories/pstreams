@@ -1,4 +1,4 @@
-/* $Id: pstream.h,v 1.17.2.3 2002/01/27 16:38:13 redi Exp $
+/* $Id: pstream.h,v 1.17.2.4 2002/01/27 16:40:27 redi Exp $
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001-2002 Jonathan Wakely
 
@@ -24,8 +24,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * @brief Declares all PStreams classes.
  * @author Jonathan Wakely
  *
- * Defines classes redi::ipstream, redi::opstream, and, conditionally,
- * redi::pstream.
+ * Defines classes redi::ipstream, redi::opstream, redi::pstream
+ * and, conditionally, redi::rpstream.
  */
 
 #ifndef REDI_PSTREAM_H
