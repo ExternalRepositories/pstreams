@@ -1,5 +1,5 @@
 /*
-$Id: Pipe.cpp,v 1.1.2.5 2004/10/01 07:09:33 francisandre Exp $
+$Id: Pipe.cpp,v 1.1.2.6 2004/10/01 07:13:11 francisandre Exp $
 */
 #if defined(_WIN32) || defined(WIN32)
 	#define REDI_OS_WIN32
@@ -119,7 +119,7 @@ int Pipe::read(void* buffer, std::streamsize size) {
 #elif	defined(REDI_OS_WIN32)
 	DWORD readed = -1; 
 	BOOL result;
-	// Read output from the child process, and write to parent's STDOUT. 
+
 	result = ReadFile( readend, buffer, size, &readed, NULL);
 	DWORD s = 0;
 	if  (!result) {
@@ -140,10 +140,6 @@ int Pipe::write(const void* buffer, std::streamsize size) {
 	if  (!result) {
 		DWORD s = GetLastError();
 	}
-// Close the pipe handle so the child process stops reading. 
-	
-//   if (! CloseHandle(hChildStdinWrDup)) 
-//      ErrorExit("Close pipe failed");
 #endif
 	return written;
 }
@@ -189,6 +185,9 @@ bool Pipe::valid(PipeSide ps) const {
 }
 /*
 $Log: Pipe.cpp,v $
+Revision 1.1.2.6  2004/10/01 07:13:11  francisandre
+fix a missing elif
+
 Revision 1.1.2.5  2004/10/01 07:09:33  francisandre
 add RCS variables: $Id and $Log
 
