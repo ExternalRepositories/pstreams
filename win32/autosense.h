@@ -5,7 +5,6 @@
 //  This section attempts to auto detect the operating system. It will set
 //  up PAC specific defines that are used by the rest of the code.
 // ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
 
 #if defined(_AIX)
 #define OS_AIX
