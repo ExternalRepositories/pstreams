@@ -1,4 +1,4 @@
-/* $Id: pstream.h,v 1.17.4.2 2002/08/27 00:20:45 redi Exp $
+/* $Id: pstream.h,v 1.17.4.3 2003/03/11 01:59:42 redi Exp $
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001-2002 Jonathan Wakely
 
@@ -154,7 +154,7 @@ namespace redi
       basic_ipstream();
 
       /// Constructor that initialises the stream by starting a process.
-      basic_ipstream(const std::string& command, std::ios_base::openmode mode = ios_base::in);
+      basic_ipstream(const std::string& command, std::ios_base::openmode mode = std::ios_base::in);
 
       /// Destructor
       ~basic_ipstream() { }
