@@ -1,27 +1,14 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
-<html>
-<head>
-  <!-- $Id: pstreams.html,v 1.7.2.2 2002/01/27 19:15:31 redi Exp $ -->
-  <title>Redi PStreams Library</title>
-  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-  <meta name='description' content='PStreams - A C++ IOStream interface to POSIX Process I/O'>
-  <meta name='keywords' content='pstreams, pstream, c++, popen, pclose, posix, process I/O, ipstream, opstream, iostream, iostreams, procbuf, pfstream'>
-  <style type='text/css'>
-    address { font-style: italic; font-size: smaller; }
-    img { border: 0; }
-    p { text-align: justify; }
-    .note { font-style: italic; font-size: smaller; }
-    .right { float: right; }
-  </style>
-</head>
-<body>
+
+<!-- start of included file -->
+
+<!-- $Id: pstreams.html,v 1.7.2.3 2002/04/06 13:02:40 redi Exp $ -->
+
 <div><a name='top'></a></div>
 <table width='100%'>
 <tbody>
 <tr>
 <td>
-<h1>PStreams Library</h1>
-<p>A C++ IOStream interface to POSIX Process I/O.</p>
+<h3>A C++ IOStream interface to POSIX Process I/O.</h3>
 </td>
 <td align='right'>
 <img src='images/pstreams1.png' alt=''>
@@ -132,8 +119,8 @@ any, is performed by the shell.</p>
 <p>Alternatively, the process can be started with a vector of arguments:</p>
 <pre><code>
 // remove some files, capturing any error messages
-std::vector<std::string> argv();
-std::vector<std::string> errors();
+std::vector&lt;std::string&gt; argv;
+std::vector&lt;std::string&gt; errors;
 argv.push_back("rm");
 argv.push_back("-rf");
 argv.push_back("./foo.txt");
@@ -179,7 +166,7 @@ Per Bothner et al. for the <code>pfstream</code> classes in the old libg++.
 <address>
 <p>Please send comments, suggestions, bugfixes, patches, cakes, pies etc. to
 pstreams&nbsp;at&nbsp;redi&nbsp;dot&nbsp;uklinux&nbsp;dot&nbsp;net
-<br />This page last updated on $Date: 2002/01/27 19:15:31 $
+<br />This page last updated on $Date: 2002/04/06 13:02:40 $
 <br />Copyright &copy; 2001,2002 Jonathan Wakely</p>
 </address>
 <p>
@@ -191,6 +178,6 @@ pstreams&nbsp;at&nbsp;redi&nbsp;dot&nbsp;uklinux&nbsp;dot&nbsp;net
   src="http://jigsaw.w3.org/css-validator/images/vcss" 
   alt="Valid CSS!"></a>
 </p>
-</body>
-</html>
+
+<!-- end of included file -->
 
