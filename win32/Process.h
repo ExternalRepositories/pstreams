@@ -1,7 +1,7 @@
 #ifndef	_Process_h_
 #define _Process_h_
 /*
-$Id: Process.h,v 1.1.2.3 2004/10/01 07:08:43 francisandre Exp $
+$Id: Process.h,v 1.1.2.4 2004/11/08 15:31:51 francisandre Exp $
 */
 #if defined(_WIN32) || defined(WIN32)
 	#define REDI_OS_WIN32
@@ -45,8 +45,8 @@ $Id: Process.h,v 1.1.2.3 2004/10/01 07:08:43 francisandre Exp $
 #include <stdexcept>
 
 using namespace std;
-typedef	list<string>		Arguments;
-typedef	list<string>		Environment;
+typedef	vector<string>		Arguments;
+typedef	vector<string>		Environment;
 
 class  Process {
 private:
@@ -122,6 +122,9 @@ private:
 #endif
 /*
 $Log: Process.h,v $
+Revision 1.1.2.4  2004/11/08 15:31:51  francisandre
+Fix Process(const string& file, const vector<string> args)
+
 Revision 1.1.2.3  2004/10/01 07:08:43  francisandre
 add RCS variables: $Id and $Log
 

@@ -1,5 +1,5 @@
 /*
-$Id: Process.cpp,v 1.1.2.4 2004/10/01 07:12:59 francisandre Exp $
+$Id: Process.cpp,v 1.1.2.5 2004/11/08 15:31:51 francisandre Exp $
 */
 #include <iostream>
 #include <cassert>
@@ -34,6 +34,9 @@ program(program),
 arguments(arguments)
 {
 	init();
+	for(Arguments::const_iterator i = arguments.begin(); i != arguments.end(); i++) {
+		arglen += i->size() + 1;
+	}
 }
 Process::Process(const string& command, void* in, void* out, void* err) :
 command(command) {
@@ -59,6 +62,9 @@ arguments(arguments)
 	startup.hStdInput	= in;
 	startup.dwFlags |= STARTF_USESTDHANDLES;
 	args = null; env = null;
+	for(Arguments::const_iterator i = arguments.begin(); i != arguments.end(); i++) {
+		arglen += i->size() + 1;
+	}
 #endif
 }
 Process::Exception::Exception(const string& text) :
@@ -125,14 +131,17 @@ bool Process::spawn() {
 
 	if  (command.empty()) {
 		if  (!arguments.empty()) {
-			args = new char[ 7 + arglen + 1];
+			args = new char[ program.size() + 1 + arglen + 1];
 			LPSTR	argv = args;
 		
-			args = static_cast<char*>(memcpy(args, "child ", 6));args+=6; 
+			args = static_cast<char*>(memcpy(args, program.data(), program.size()));
+			args+=program.size();*args++ = ' ';
+
 			for(Arguments::iterator i = arguments.begin(); i != arguments.end(); i++) {
 				std::memcpy(args, i->data(), i->size());args+=i->size();*args++=' ';
 			}
 			*args = 0;
+			args = argv;
 		}
 
 		if  (!environment.empty()) {
@@ -243,6 +252,9 @@ Process::getLastError() const {
 }
 /*
 $Log: Process.cpp,v $
+Revision 1.1.2.5  2004/11/08 15:31:51  francisandre
+Fix Process(const string& file, const vector<string> args)
+
 Revision 1.1.2.4  2004/10/01 07:12:59  francisandre
 fix a missing elif
 
