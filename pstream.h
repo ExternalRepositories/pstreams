@@ -1,4 +1,4 @@
-/* $Id: pstream.h,v 1.79.2.2 2004/10/01 06:12:34 francisandre Exp $
+/* $Id: pstream.h,v 1.79.2.3 2004/10/01 07:02:48 francisandre Exp $
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001,2002,2003,2004 Jonathan Wakely
 
@@ -45,25 +45,24 @@ along with PStreams; if not, write to the Free Software Foundation, Inc.,
 #include <assert.h>
 
 #if defined(_WIN32) || defined(WIN32)
-	#define OS_WIN32
+	#define REDI_OS_WIN32
 	#ifndef WIN32
 		#define WIN32
 	#endif
 #else
-	#define OS_UNIX
+	#define REDI_OS_UNIX
 #endif
 
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
 	#include <sys/types.h>  // for pid_t
 	#include <sys/wait.h>   // for waitpid()
 	#include <unistd.h>     // for pipe() fork() exec() and filedes functions
 	#include <signal.h>     // for kill()
 
 
-#elif	defined(OS_WIN32)
-	#include <win32/Process.h>
-	#include <win32/Program.h>
-	#include <win32/Pipe.h>
+#elif	defined(REDI_OS_WIN32)
+	#include <pstreams/win32/Process.h>
+	#include <pstreams/win32/Pipe.h>
 
 	#include <io.h>
 	typedef int	pid_t;
@@ -156,9 +155,9 @@ namespace redi
       close();
 
       /// Send a signal to the process.
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
 	basic_pstreambuf*						kill(int signal = SIGTERM);
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 	basic_pstreambuf*						kill(int signal = 0);//FIXME 
 #endif
       /// Close the pipe connected to the process' stdin.
@@ -233,27 +232,27 @@ namespace redi
       wait(bool nohang = false);
 
       /// Return the file descriptor for the output pipe.
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
 	fd_type&
 	wpipe();
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 	Pipe&
 	wpipe();
 #endif
       /// Return the file descriptor for the active input pipe.
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
 	fd_type&
 	rpipe();
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 	Pipe&
 	rpipe();
 #endif
 
       /// Return the file descriptor for the specified input pipe.
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
 	fd_type&
 	rpipe(buf_read_src which);
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 	Pipe&
 	rpipe(buf_read_src which);
 #endif
@@ -284,11 +283,11 @@ namespace redi
       void
       init_rbuffers();
 
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
       pid_t         ppid_;        // pid of process
       fd_type       wpipe_;       // pipe used to write to process' stdin
       fd_type       rpipe_[2];    // two pipes to read from, stdout and stderr
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 	  Process				process;
 	  // pipe for the child process's STDOUT. 
 	  Pipe				childstdout;
@@ -413,8 +412,8 @@ namespace redi
        * @param mode     the I/O mode to use when opening the pipe.
        * @see   do_open(const std::string&, pmode)
        */
-      basic_ipstream(const std::string& command, pmode mode = std::ios_base::in)
-      : istream_type(NULL), pbase_type(command, mode)
+      basic_ipstream(const std::string& command, pmode mode = pstdin)
+      : istream_type(NULL), pbase_type(command, mode | pstdin)
       { 
 		if  (mode & std::ios_base::binary)	unsetf(ios_base::skipws);
 	  }
@@ -432,8 +431,8 @@ namespace redi
        */
       basic_ipstream( const std::string& file,
                       const argv_type& argv,
-                      pmode mode = std::ios_base::in )
-      : istream_type(NULL), pbase_type(file, argv, mode)
+                      pmode mode = pstdin )
+      : istream_type(NULL), pbase_type(file, argv, mode | pstdin)
       {
 		if  (mode & std::ios_base::binary)	unsetf(ios_base::skipws);
 	  }
@@ -459,7 +458,7 @@ namespace redi
       void
       open(const std::string& command, pmode mode = std::ios_base::in)
       {
-        this->do_open(command, mode);
+        this->do_open(command, mode | pstdin);
       }
 
       /**
@@ -478,7 +477,7 @@ namespace redi
             const argv_type& argv,
             pmode mode = std::ios_base::in )
       {
-        this->do_open(file, argv, mode);
+        this->do_open(file, argv, mode | pstdin);
       }
 
       /**
@@ -548,7 +547,7 @@ namespace redi
        */
       basic_opstream( const std::string& command,
                       pmode mode = std::ios_base::out )
-      : ostream_type(NULL), pbase_type(command, mode)
+      : ostream_type(NULL), pbase_type(command, mode | pstdout)
       {
 		if  (mode & std::ios_base::binary)	unsetf(ios_base::skipws);
 	  }
@@ -567,7 +566,7 @@ namespace redi
       basic_opstream( const std::string& file,
                       const argv_type& argv,
                       pmode mode = std::ios_base::out )
-      : ostream_type(NULL), pbase_type(file, argv, mode)
+      : ostream_type(NULL), pbase_type(file, argv, mode  | pstdout)
       { 
 		if  (mode & std::ios_base::binary)	unsetf(ios_base::skipws);
 	  }
@@ -588,7 +587,7 @@ namespace redi
       void
       open(const std::string& command, pmode mode = std::ios_base::out)
       {
-        this->do_open(command, mode);
+        this->do_open(command, mode | pstdout);
       }
 
       /**
@@ -603,7 +602,7 @@ namespace redi
             const argv_type& argv,
             pmode mode = std::ios_base::out )
       {
-        this->do_open(file, argv, mode);
+        this->do_open(file, argv, mode | pstdout);
       }
 	};
 
@@ -654,7 +653,7 @@ namespace redi
        */
       basic_pstream( const std::string& command,
                      pmode mode = std::ios_base::in|std::ios_base::out )
-      : iostream_type(NULL), pbase_type(command, mode)
+      : iostream_type(NULL), pbase_type(command, mode | pstdin | pstdout)
       {
 		if  (mode & std::ios_base::binary)	unsetf(ios_base::skipws);
 	  }
@@ -673,7 +672,7 @@ namespace redi
       basic_pstream( const std::string& file,
                      const argv_type& argv,
                      pmode mode = std::ios_base::in|std::ios_base::out )
-      : iostream_type(NULL), pbase_type(file, argv, mode)
+      : iostream_type(NULL), pbase_type(file, argv, mode | pstdin | pstdout)
       {
 		if  (mode & std::ios_base::binary)	unsetf(ios_base::skipws);
 	  }
@@ -695,7 +694,7 @@ namespace redi
       open( const std::string& command,
             pmode mode = std::ios_base::in|std::ios_base::out )
       {
-        this->do_open(command, mode);
+        this->do_open(command, mode | pstdin | pstdout);
       }
 
       /**
@@ -710,7 +709,7 @@ namespace redi
             const argv_type& argv,
             pmode mode = std::ios_base::in|std::ios_base::out )
       {
-        this->do_open(file, argv, mode);
+        this->do_open(file, argv, mode | pstdin | pstdout);
       }
 
       /**
@@ -794,7 +793,7 @@ namespace redi
        */
       basic_rpstream( const std::string& command,
                       pmode mode = std::ios_base::in|std::ios_base::out )
-      : ostream_type(NULL) , istream_type(NULL) , pbase_type(command, mode)
+      : ostream_type(NULL) , istream_type(NULL) , pbase_type(command, mode | pstdin | pstdout)
       {
 		if  (mode & std::ios_base::binary)	unsetf(ios_base::skipws);
 	  }
@@ -813,7 +812,7 @@ namespace redi
       basic_rpstream( const std::string& file,
                       const argv_type& argv,
                       pmode mode = std::ios_base::in|std::ios_base::out )
-      : ostream_type(NULL), istream_type(NULL), pbase_type(file, argv, mode)
+      : ostream_type(NULL), istream_type(NULL), pbase_type(file, argv, mode | pstdin | pstdout)
       {
 		if  (mode & std::ios_base::binary)	unsetf(ios_base::skipws);
 	  }
@@ -834,7 +833,7 @@ namespace redi
       open( const std::string& command,
             pmode mode = std::ios_base::in|std::ios_base::out )
       {
-        this->do_open(command, mode);
+        this->do_open(command, mode | pstdin | pstdout);
       }
 
       /**
@@ -853,7 +852,7 @@ namespace redi
             const argv_type& argv,
             pmode mode = std::ios_base::in|std::ios_base::out )
       {
-        this->do_open(file, argv, mode);
+        this->do_open(file, argv, mode | pstdin | pstdout);
       }
 
       /**
@@ -931,11 +930,11 @@ namespace redi
   template <typename C, typename T>
     inline
     basic_pstreambuf<C,T>::basic_pstreambuf()
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
     : ppid_(-1)   // initialise to -1 to indicate no process run yet.
     , wpipe_(-1)
 	, wbuffer_(0)
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 	: wbuffer_(0)
 #endif
     , rsrc_(rsrc_out)
@@ -956,11 +955,11 @@ namespace redi
   template <typename C, typename T>
     inline
     basic_pstreambuf<C,T>::basic_pstreambuf(const std::string& command, pmode mode)
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
     : ppid_(-1)   // initialise to -1 to indicate no process run yet.
     , wpipe_(-1)
 	, wbuffer_(0)
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 	: wbuffer_(0)
 #endif
     , rsrc_(rsrc_out)
@@ -985,11 +984,11 @@ namespace redi
     basic_pstreambuf<C,T>::basic_pstreambuf( const std::string& file,
                                              const argv_type& argv,
                                              pmode mode )
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
     : ppid_(-1)   // initialise to -1 to indicate no process run yet.
     , wpipe_(-1)
     , wbuffer_(0)
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
     : wbuffer_(0)
 #endif
     , rsrc_(rsrc_out)
@@ -1031,7 +1030,7 @@ namespace redi
 
       if (!is_open())
       {
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
 		switch(fork(mode))
         {
           case 0 :
@@ -1058,7 +1057,7 @@ namespace redi
             ret = this;
           }
         }
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 		switch (fork(mode)) {
 			case 1:
 			default:
@@ -1104,7 +1103,7 @@ namespace redi
 
       if (!is_open())
       {
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
         switch(fork(mode))
         {
           case 0 :
@@ -1142,7 +1141,7 @@ namespace redi
             ret = this;
           }
         }
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 		switch (fork(mode)) {
 			case 1:
 			default:
@@ -1175,7 +1174,7 @@ namespace redi
   inline void
   close_fd_array(int* filedes, std::size_t count)
   {
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
     for (std::size_t i = 0; i < count; ++i)
       if (filedes[i] >= 0)
         if (::close(filedes[i]) == 0)
@@ -1208,7 +1207,7 @@ namespace redi
       // three pairs of file descriptors, for pipes connected to the
       // process' stdin, stdout and stderr
       // (stored in a single array so close_fd_array() can close all at once)
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
       fd_type fd[6] =  {-1, -1, -1, -1, -1, -1};
       fd_type* const pin = fd;
       fd_type* const pout = fd+2;
@@ -1306,7 +1305,7 @@ namespace redi
         // close any pipes we opened before failure
         close_fd_array(fd, 6);
       }
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 	childstdout.open();
 	childstderr.open();
 	childstdin.open();
@@ -1357,10 +1356,10 @@ FIXME to be clarified later:))
         destroy_buffers(pstdin|pstdout|pstderr);
 
         // close pipes before wait() so child gets EOF/SIGPIPE
-#if	defined(OS_UNIX)
+#if	defined(REDI_OS_UNIX)
         close_fd_array(&wpipe_, 1);
         close_fd_array(rpipe_, 2);
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 		wpipe_.close();
 		rpipe_[0].close();
 		rpipe_[1].close();
@@ -1381,7 +1380,7 @@ FIXME to be clarified later:))
     inline void
     basic_pstreambuf<C,T>::init_rbuffers()
     {
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
       rpipe_[rsrc_out] = rpipe_[rsrc_err] = -1;
 #endif
       rbuffer_[rsrc_out] = rbuffer_[rsrc_err] = 0;
@@ -1476,7 +1475,7 @@ FIXME to be clarified later:))
       int exited = -1;
       if (is_open())
       {
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
 #ifdef	WHAT_UNIX_COULD_BE
 		switch(exited = process.wait(nohang ? WNOHANG : 0)) {
 			case Process::UNDEF:
@@ -1554,7 +1553,7 @@ FIXME to be clarified later:))
       basic_pstreambuf<C,T>* ret = NULL;
       if (is_open())
       {
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
 #ifdef	WHAT_UNIX_COULD_BE
 		if  (process.stop()) {
 			ret = this;
@@ -1585,9 +1584,9 @@ FIXME to be clarified later:))
     inline bool
     basic_pstreambuf<C,T>::exited()
     {
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
       return ppid_ == 0 || wait(true)==1;
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 		return process.state() == Process::EXITED;
 #endif
     }
@@ -1625,9 +1624,9 @@ FIXME to be clarified later:))
     {
       sync();
       destroy_buffers(pstdin);
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
       close_fd_array(&wpipe_, 1);
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 		wpipe_.close();
 #endif
     }
@@ -1646,9 +1645,9 @@ FIXME to be clarified later:))
     inline bool
     basic_pstreambuf<C,T>::is_open() const
     {
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
       return ppid_ > 0;
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 	return process.active();
 #endif
     }
@@ -1666,9 +1665,9 @@ FIXME to be clarified later:))
     basic_pstreambuf<C,T>::read_err(bool readerr)
     {
       buf_read_src src = readerr ? rsrc_err : rsrc_out;
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
       if (rpipe_[src]>=0)
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 	  if (rpipe_[src].valid(Pipe::ReadSide))
 #endif
       {
@@ -1836,9 +1835,9 @@ FIXME to be clarified later:))
     inline std::streamsize
     basic_pstreambuf<C,T>::write(char_type* s, std::streamsize n)
     {
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
 		return wpipe() >= 0 ? ::write(wpipe(), s, n * sizeof(char_type)) : 0;
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 		return wpipe().valid(Pipe::WriteSide) ? wpipe().write(s, n * sizeof(char_type)) : 0;
 #endif
 	}
@@ -1856,18 +1855,18 @@ FIXME to be clarified later:))
     inline std::streamsize
     basic_pstreambuf<C,T>::read(char_type* s, std::streamsize n)
     {
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
       return rpipe() >= 0 ? ::read(rpipe(), s, n * sizeof(char_type)) : 0;
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 		return rpipe().valid(Pipe::ReadSide) ? rpipe().read(s, n * sizeof(char_type)) : 0;
 #endif
     }
 
   /** @return a reference to the output file descriptor */
   template <typename C, typename T>
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
     inline typename basic_pstreambuf<C,T>::fd_type&
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
     Pipe&
 #endif
     basic_pstreambuf<C,T>::wpipe()
@@ -1877,9 +1876,9 @@ FIXME to be clarified later:))
 
   /** @return a reference to the active input file descriptor */
   template <typename C, typename T>
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
     inline typename basic_pstreambuf<C,T>::fd_type&
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
     Pipe&
 #endif
     basic_pstreambuf<C,T>::rpipe()
@@ -1889,9 +1888,9 @@ FIXME to be clarified later:))
 
   /** @return a reference to the specified input file descriptor */
   template <typename C, typename T>
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
     inline typename basic_pstreambuf<C,T>::fd_type&
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
     Pipe&
 #endif
     basic_pstreambuf<C,T>::rpipe(buf_read_src which)
@@ -2097,7 +2096,7 @@ FIXME to be clarified later:))
     {
       in = out = err = NULL;
       std::size_t open_files = 0;
-#if		defined(OS_UNIX)
+#if		defined(REDI_OS_UNIX)
       if (wpipe() > -1)
       {
         if ((in = ::fdopen(wpipe(), "w")))
@@ -2119,7 +2118,7 @@ FIXME to be clarified later:))
             open_files |= pstderr;
         }
       }
-#elif	defined(OS_WIN32)
+#elif	defined(REDI_OS_WIN32)
 	if (wpipe().valid()) {
 		if (in = ::fdopen(wpipe(), "w")) {
 			open_files |= pstdin;
