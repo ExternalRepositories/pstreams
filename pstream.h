@@ -1,4 +1,4 @@
-/* $Id: pstream.h,v 1.79.2.5 2005/04/06 16:11:21 francisandre Exp $
+/* $Id: pstream.h,v 1.79.2.6 2005/04/07 09:30:53 francisandre Exp $
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001,2002,2003,2004 Jonathan Wakely
 
@@ -67,7 +67,7 @@ along with PStreams; if not, write to the Free Software Foundation, Inc.,
 
 
 /// The library version.
-#define PSTREAMS_VERSION 0x0031   // 0.49 (version 1.0 will be 0x0100)
+#define PSTREAMS_VERSION 0x0050   // 0.50 (version 1.0 will be 0x0100)
 
 /**
  *  @namespace redi
@@ -1144,9 +1144,13 @@ namespace redi
 					childstdout.closeWriteEndPoint();
 					create_buffers(mode);
 					ret = this;
+				} else {
+					error_ = process.getLastError();
 				}
 			} catch (exception&) {
+				error_ = process.getLastError();
 			} catch (...) {
+				error_ = process.getLastError();
 			}
 		}
 #endif
