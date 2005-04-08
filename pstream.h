@@ -1,4 +1,4 @@
-/* $Id: pstream.h,v 1.17.4.4 2003/03/11 02:03:37 redi Exp $
+/* $Id: pstream.h,v 1.17.4.5 2005/04/08 21:34:30 redi Exp $
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001-2002 Jonathan Wakely
 
@@ -34,18 +34,7 @@ along with PStreams; if not, write to the Free Software Foundation, Inc.,
 #define REDI_PSTREAM_H
 
 /// The library version.
-#define PSTREAMS_VERSION 0x0011   // 0.17
-
-// check whether to provide pstream
-// popen() needs to use bidirectional pipe
-#if ! defined(REDI_PSTREAMS_POPEN_USES_BIDIRECTIONAL_PIPE)
-#if defined(__FreeBSD__) && __FreeBSD__ >= 3
-# define REDI_PSTREAMS_POPEN_USES_BIDIRECTIONAL_PIPE 1
-#elif defined(__NetBSD_Version__) && __NetBSD_Version__ >= 0x01040000
-# define REDI_PSTREAMS_POPEN_USES_BIDIRECTIONAL_PIPE 1
-#endif
-#endif
-
+#define PSTREAMS_VERSION 0x0011         // 0.17
 
 #include <ios>
 #include <streambuf>
@@ -55,6 +44,22 @@ along with PStreams; if not, write to the Free Software Foundation, Inc.,
 #include <cstdio>
 #include <cerrno>
 
+#if defined(WIN32)
+# define REDI_PSTREAMS_POPEN _popen
+# define REDI_PSTREAMS_PCLOSE _pclose
+#else
+# define REDI_PSTREAMS_POPEN popen
+# define REDI_PSTREAMS_PCLOSE pclose
+// check whether to provide pstream
+// popen() needs to use bidirectional pipe
+# if ! defined(REDI_PSTREAMS_POPEN_USES_BIDIRECTIONAL_PIPE)
+#  if defined(__FreeBSD__) && __FreeBSD__ >= 3
+#   define REDI_PSTREAMS_POPEN_USES_BIDIRECTIONAL_PIPE 1
+#  elif defined(__NetBSD_Version__) && __NetBSD_Version__ >= 0x01040000
+#   define REDI_PSTREAMS_POPEN_USES_BIDIRECTIONAL_PIPE 1
+#  endif
+# endif
+#endif
 
 /// All PStreams classes are declared in namespace redi.
 namespace redi
@@ -216,6 +221,8 @@ namespace redi
     };
 
   /// Type definition for common template specialisation.
+  typedef basic_pstreambuf<char, std::char_traits<char> > pstreambuf;
+  /// Type definition for common template specialisation.
   typedef basic_ipstream<char> ipstream;
   /// Type definition for common template specialisation.
   typedef basic_opstream<char> opstream;
@@ -283,7 +290,7 @@ namespace redi
       basic_pstreambuf<C,T>* ret = NULL;
       if (!this->is_open())
       {
-          file_ = ::popen(command.c_str(), openmode2str(mode).c_str());
+          file_ = REDI_PSTREAMS_POPEN(command.c_str(), openmode2str(mode).c_str());
           if (this->is_open())
               ret = this;
       }
@@ -302,7 +309,7 @@ namespace redi
       if (this->is_open())
       {
         errno = 0;
-        ::pclose(file_);
+        REDI_PSTREAMS_PCLOSE(file_);
         if (errno==0)
         {
           ret = this;
@@ -844,6 +851,8 @@ namespace redi
  */
 // TODO don't use @htmlinclude here, 
 
+#undef REDI_PSTREAMS_PCLOSE
+#undef REDI_PSTREAMS_POPEN
 
 #endif  // REDI_PSTREAM_H
 
