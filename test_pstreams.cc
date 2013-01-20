@@ -385,6 +385,30 @@ int main()
         ps.clear();
     }
 
+    {
+        // test killing process group
+        const string cmd = "( sleep 10 & sleep 10 )";
+        pstream ps(cmd);
+
+        pstreambuf* pbuf = ps.rdbuf();
+
+        const int e1 = pbuf->error();
+        print_result(ps, e1 == 0);
+        pbuf->killpg(SIGTERM);
+        const int e2 = pbuf->error();
+        print_result(ps, e1 == e2);
+
+        sleep(SLEEP_TIME);  // allow time for child process to exit completely
+
+        // close() will call sync(), which shouldn't flush buffer after kill()
+        pbuf->close();
+
+        const int e3 = pbuf->error();
+        check_fail(ps << "127 fail 127\n");
+        print_result(ps, e1 == e3);
+    }
+
+
     clog << "# Testing pstreambuf::exited()" << endl;
     {
         // test streambuf::exited() works sanely
