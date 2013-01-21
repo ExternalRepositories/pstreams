@@ -1,13 +1,13 @@
-# $Id: Makefile,v 1.25 2005/07/19 08:24:29 redi Exp $
+# $Id: Makefile,v 1.39 2010/10/14 21:35:22 redi Exp $
 # PStreams Makefile
 # Copyright (C) Jonathan Wakely
 #
 # This file is part of PStreams.
 # 
 # PStreams is free software; you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as
-# published by the Free Software Foundation; either version 2.1 of
-# the License, or (at your option) any later version.
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
 # 
 # PStreams is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,39 +15,38 @@
 # GNU Lesser General Public License for more details.
 # 
 # You should have received a copy of the GNU Lesser General Public License
-# along with PStreams; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# TODO configure script (allow doxgenating of EVISCERATE functions)
+# TODO configure script (allow doxygenating of EVISCERATE functions)
 
-OPTIM=-g3
-EXTRA_CFLAGS=
+OPTIM= -O1 -g3
 EXTRA_CXXFLAGS=
 
 CFLAGS=-pedantic -Werror -Wall -W -Wpointer-arith -Wcast-qual -Wcast-align -Wredundant-decls $(OPTIM)
 CXXFLAGS=$(CFLAGS) -std=c++98 -Woverloaded-virtual
 
-INSTALL_PREFIX ?= /usr/local
+prefix = /usr/local
+includedir = $(prefix)/include
+INSTALL = install
+INSTALL_DATA = $(INSTALL) -p -v -m 0644
 
 SOURCES = pstream.h
 GENERATED_FILES = ChangeLog MANIFEST
 EXTRA_FILES = AUTHORS COPYING.LIB Doxyfile INSTALL Makefile README \
-	    mainpage.html test_pstreams.cc test_minimum.cc
+	    mainpage.html test_pstreams.cc test_minimum.cc pstreams-devel.spec
 
 DIST_FILES = $(SOURCES) $(GENERATED_FILES) $(EXTRA_FILES)
 
-VERS = 0.5.2
+VERS := $(shell awk -F' ' '/^\#define *PSTREAMS_VERSION/{ print $$NF }' pstream.h)
 
 all: docs $(GENERATED_FILES)
 
-test: test_pstreams test_minimum
-	@./test_minimum >/dev/null 2>&1 || echo "TEST EXITED WITH STATUS $$?"
-	@./test_pstreams >/dev/null || echo "TEST EXITED WITH STATUS $$?"
+check: test_pstreams test_minimum | pstreams.wout
+	@for test in $^ ; do echo $$test ; ./$$test >/dev/null 2>&1 || echo "$$test EXITED WITH STATUS $$?" ; done
 
-test_pstreams: test_pstreams.cc pstream.h
-	$(CXX) $(CXXFLAGS) $(EXTRA_CXXFLAGS) $(LDFLAGS) -o $@ $<
+test run_tests: check
 
-test_minimum: test_minimum.cc pstream.h
+test_%: test_%.cc pstream.h
 	$(CXX) $(CXXFLAGS) $(EXTRA_CXXFLAGS) $(LDFLAGS) -o $@ $<
 
 MANIFEST: Makefile
@@ -56,11 +55,11 @@ MANIFEST: Makefile
 docs: pstream.h mainpage.html
 	@doxygen Doxyfile
 
-mainpage.html: Makefile
+mainpage.html: pstream.h Makefile
 	@perl -pi -e "s/^(<p>Version) [0-9\.]*(<\/p>)/\1 $(VERS)\2/" $@
 
 ChangeLog:
-	@if [ -f CVS/Root ] ; then cvs2cl.pl ; fi
+	@if [ -f CVS/Root ] ; then cvs2cl --no-times -U usermap -F trunk ; fi
 
 dist: pstreams-$(VERS).tar.gz pstreams-docs-$(VERS).tar.gz
 
@@ -82,8 +81,11 @@ clean:
 	@rm -rf doc TODO
 
 install:
-	@install -d $(INSTALL_PREFIX)/include/pstreams
-	@install -v -m0644 pstream.h $(INSTALL_PREFIX)/include/pstreams
+	@install -d $(DESTDIR)$(includedir)/pstreams
+	@$(INSTALL_DATA) pstream.h $(DESTDIR)$(includedir)/pstreams/pstream.h
 
-.PHONY: TODO test ChangeLog
+pstreams.wout:
+	@echo "Wide Load" | iconv -f ascii -t UTF-32 > $@
+
+.PHONY: TODO check test ChangeLog run_tests
 

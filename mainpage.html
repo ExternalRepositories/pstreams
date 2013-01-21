@@ -1,19 +1,19 @@
 
 <!-- start of included file -->
 
-<!-- $Id: mainpage.html,v 1.15 2005/06/11 10:06:59 redi Exp $ -->
+<!-- $Id: mainpage.html,v 1.21 2010/10/14 21:35:22 redi Exp $ -->
 
-<h3>A C++ IOStream interface to POSIX Process I/O.</h3>
+<h3>A C++ iostream interface to POSIX process I/O.</h3>
 
 <p>The library is a work in progress. It is intended to provide a C++
 re-implementation of the POSIX.2 functions <kbd class="man_page">popen</kbd>(3)
-and <kbd class="man_page">pclose</kbd>(3), using IOStreams to read from and
+and <kbd class="man_page">pclose</kbd>(3), using iostreams to read from and
 write to the opened process.</p>
 <p>The advantages over the standard <code>popen()</code> function are:
 <ul>
 <li>Standard C++ interface. PStreams classes can be used in any code that
-expects an IOStream class, giving all the advantages of type-safety and
-localisation that IOStreams have over the
+expects an iostream class, giving all the advantages of type-safety and
+localisation that iostreams have over the
 <code>printf()</code>/<code>scanf()</code> functions in standard C.</li>
 <li>Bidirectional I/O. Implementations of <code>popen()</code> vary
 between systems. Some systems use bidirectional pipes, allowing reading
@@ -36,7 +36,7 @@ kill or otherwise control it.</li>
 
 <p>&nbsp;</p>
 <h2><a name='status'>Current status</a></h2>
-<p>Version 0.5.2</p>
+<p>Version 0.7.2</p>
 <p>Working <code>ipstream</code>, <code>opstream</code> and
 <code>pstream</code> classes for
 ISO C++-compliant compilers. The classes are fully functional and the
@@ -96,7 +96,7 @@ argv.push_back("-rf");
 argv.push_back("./foo.txt");
 argv.push_back("./bar.html");
 argv.push_back("./fnord/");
-redi::ipstream in("rm", argv, pstreambuf::pstderr);
+redi::ipstream in("rm", argv, redi::pstreambuf::pstderr);
 std::string errmsg;
 while (std::getline(in, errmsg)) {
     errors.push_back(errmsg);
@@ -116,6 +116,43 @@ while (std::getline(in<strong>.err()</strong>, errmsg)) {
 </code></pre>
 <p>This form can also be used with the unrestricted <code>pstream</code>
 and <code>ipstream</code> classes, but it is not strictly necessary.</p>
+
+<p>Here is a more complete example, showing how to use
+<code>std::istream::readsome()</code> to read without blocking:</p>
+<pre>
+const pstreams::pmode mode = pstreams::pstdout|pstreams::pstderr;
+ipstream child("echo OUT1; sleep 1; echo ERR &gt;&amp;2; sleep 1; echo OUT2", mode);
+char buf[1024];
+std::streamsize n;
+bool finished[2] = { false, false };
+while (!finished[0] || !finished[1])
+{
+    if (!finished[0])
+    {
+        while ((n = child.err().readsome(buf, sizeof(buf))) &gt; 0)
+            std::cerr.write(buf, n).flush();
+        if (child.eof())
+        {
+            finished[0] = true;
+            if (!finished[1])
+                child.clear();
+        }
+    }
+
+    if (!finished[1])
+    {
+        while ((n = child.out().readsome(buf, sizeof(buf))) &gt; 0)
+            std::cout.write(buf, n).flush();
+        if (child.eof())
+        {
+            finished[1] = true;
+            if (!finished[0])
+                child.clear();
+        }
+    }
+}
+</pre>
+
 
 <p>Since the underlying streams controlled by the <code>pstreambuf</code>
 are pipes, seek operations will not succeed. <code>pstreambuf::seekoff()</code>

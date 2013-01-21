@@ -1,13 +1,13 @@
 /*
 PStreams - POSIX Process I/O for C++
-Copyright (C) 2002-2006 Jonathan Wakely
+Copyright (C) 2002-2010 Jonathan Wakely
 
 This file is part of PStreams.
 
 PStreams is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as
-published by the Free Software Foundation; either version 2.1 of
-the License, or (at your option) any later version.
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation; either version 3 of the License, or
+(at your option) any later version.
 
 PStreams is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,10 +15,10 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU Lesser General Public License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with PStreams; if not, write to the Free Software Foundation, Inc.,
-59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <cassert>
 
 // TODO test rpstream more
 // TODO test whether error_ cleared after successful open().
@@ -40,28 +40,25 @@ along with PStreams; if not, write to the Free Software Foundation, Inc.,
 #include <string>
 #include <sstream>
 #include <fstream>
+#include <cstring>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 //#include <fcntl.h>
 #include <errno.h>
 
+
 #define PSTREAMS_VERSION_MAJOR PSTREAMS_VERSION & 0xff00
 #define PSTREAMS_VERSION_MINOR PSTREAMS_VERSION & 0x00f0
 #define PSTREAMS_VERSION_PATCHLEVEL PSTREAMS_VERSION & 0x000f
 
-#ifndef CONDITIONAL_SLEEP
-# if defined (__sun) || defined(__APPLE__)
-// takes a while for child to exit on this OS.
-#  define CONDITIONAL_SLEEP sleep(1);
-# else
-#  define CONDITIONAL_SLEEP
-# endif
-#endif
-
 #ifndef SLEEP_TIME
 // increase these if your OS takes a while for processes to exit
-#define SLEEP_TIME 2
+# if defined (__sun) || defined(__APPLE__)
+#  define SLEEP_TIME 2
+# else
+#  define SLEEP_TIME 1
+# endif
 #endif
 
 using namespace std;
@@ -164,6 +161,9 @@ int main()
 {
     ios_base::sync_with_stdio();
 
+    const pstreams::pmode all3streams =
+        pstreams::pstdin|pstreams::pstdout|pstreams::pstderr;
+
     string str;
 
     clog << "# Testing basic I/O\n";
@@ -195,6 +195,20 @@ int main()
         opstream os("sed", argv);
 
         check_pass(os << "Magic Monkey\n");
+    }
+
+    {
+        // test execve() style construction
+        //
+        // This should read the strings on stdin and print them on stdout
+        // prefixed by "STDIN: "
+
+        pstreams::argv_type argv;
+        argv.push_back("sed");
+        argv.push_back("s/^/STDIN: /");
+        opstream os(argv);
+
+        check_pass(os << "Tragic Donkey\n");
     }
 
     {
@@ -270,18 +284,11 @@ int main()
 
     clog << "# Testing bidirectional PStreams\n";
 
-    const pstreams::pmode all3streams =
-        pstreams::pstdin|pstreams::pstdout|pstreams::pstderr;
-
     {
         // test reading from bidirectional pstream
 
-#if defined(__sun)
-        // Solaris' grep doesn't like "--" and "-"
         const string cmd = "grep '^127' /etc/hosts /no/such/file /dev/stdin";
-#else
-        const string cmd = "grep '^127' -- /etc/hosts /no/such/file -";
-#endif
+
         pstream ps(cmd, all3streams);
 
         print_result(ps, ps.is_open());
@@ -305,12 +312,8 @@ int main()
         // test input on bidirectional pstream
         // and test child moves onto next file after peof on stdin
 
-#if defined (__sun)
-        // Solaris' grep doesn't like "--" and "-"
         const string cmd = "grep fnord /etc/hosts /dev/stdin";
-#else
-        const string cmd = "grep fnord -- /etc/hosts -";
-#endif
+
         pstream ps(cmd, all3streams);
 
         print_result(ps, ps.is_open());
@@ -382,6 +385,30 @@ int main()
         ps.clear();
     }
 
+    {
+        // test killing process group
+        const string cmd = "( sleep 10 & sleep 10 )";
+        pstream ps(cmd);
+
+        pstreambuf* pbuf = ps.rdbuf();
+
+        const int e1 = pbuf->error();
+        print_result(ps, e1 == 0);
+        pbuf->killpg(SIGTERM);
+        const int e2 = pbuf->error();
+        print_result(ps, e1 == e2);
+
+        sleep(SLEEP_TIME);  // allow time for child process to exit completely
+
+        // close() will call sync(), which shouldn't flush buffer after kill()
+        pbuf->close();
+
+        const int e3 = pbuf->error();
+        check_fail(ps << "127 fail 127\n");
+        print_result(ps, e1 == e3);
+    }
+
+
     clog << "# Testing pstreambuf::exited()" << endl;
     {
         // test streambuf::exited() works sanely
@@ -418,8 +445,9 @@ int main()
         ipstream is(badcmd);
         // print_result(is, !is.is_open());  // XXX cannot pass this test!
 
-        // fail next test if OS slow to terminate child process, need sleep()
-        CONDITIONAL_SLEEP
+        (void) is.err();
+        while (!is.rdbuf()->in_avail())  // need to wait for exit
+            ::sleep(1);
 
         print_result(is, is.rdbuf()->exited() && !is.is_open());
     }
@@ -444,7 +472,7 @@ int main()
     {
         // test writing to bad command
         opstream ofail(badcmd);
-        CONDITIONAL_SLEEP  // give shell time to try command and exit
+        ::sleep(SLEEP_TIME);
         // this would cause SIGPIPE: ofail<<"blahblah";
         // does not show failure: print_result(ofail, !ofail.is_open());
         pstreambuf* buf = ofail.rdbuf();
@@ -511,11 +539,39 @@ int main()
 
     {
         // testing streambuf::in_avail()
-        ipstream in("echo 'this is hardcore'");
+        ipstream in("{ printf 'this is ' ; sleep 2 ; printf 'hardcore' ; }");
+        sleep(1);
         streamsize avail = in.rdbuf()->in_avail();
-        cout << "STDOUT: " << avail << " characters: " << in.rdbuf();
         print_result(in, avail > 0);
-        print_result(in, size_t(avail) == strlen("this is hardcore\n"));
+        print_result(in, size_t(avail) == strlen("this is "));
+
+        std::vector<char> buf;
+        int tries = 0;
+        while (in && avail >= 0)
+        {
+            if (avail > 0)
+            {
+                if (tries)
+                {
+                    cout << "Nothing to read " << tries << " times." << endl;
+                    tries = 0;
+                }
+                buf.resize(avail);
+                in.readsome(&buf.front(), avail);
+                cout << "STDOUT: " << avail << " characters: "
+                    << string(buf.begin(), buf.end()) << endl;
+            }
+            else
+                ++tries;
+            avail = in.rdbuf()->in_avail();
+        }
+
+        if (tries)
+            cout << "Nothing to read " << tries << " times." << endl;
+        char c;
+        check_pass(in);
+        check_fail(in >> c);
+        print_result(in, in.eof());
     }
 
     // TODO more testing of other members
@@ -591,6 +647,35 @@ int main()
         check_fail(in.out().get(c));
         in.clear(); // clear EOF
         check_fail(in.err().get(c));
+    }
+
+    clog << "# Testing initial pmode set correctly\n";
+    {
+        char c;
+        string s;
+        ipstream in("echo 'abc' >&2", pstreambuf::pstderr);
+        print_result(in, getline(in, s));
+        print_result(in, s == "abc");
+        check_fail(in.get(c));
+        in.close();
+        in.clear(); // clear EOF
+        s.erase();
+
+        in.open("echo 'abc'", pstreambuf::pstdout);
+        print_result(in, getline(in, s));
+        print_result(in, s == "abc");
+        check_fail(in.get(c));
+        in.close();
+        in.clear(); // clear EOF
+        s.erase();
+
+        in.open("echo 'abc' >&2", pstreambuf::pstderr);
+        print_result(in, getline(in, s));
+        print_result(in, s == "abc");
+        check_fail(in.get(c));
+        in.close();
+        in.clear(); // clear EOF
+        s.erase();
     }
 
 #if REDI_EVISCERATE_PSTREAMS
@@ -719,8 +804,6 @@ int main()
         // close() should hang until interrupted then finish closing
         in.close();
 
-        sigaction(SIGALRM, &oldact, 0);
-
         // check no open files except for stdin, stdout, stderr
         int fd = dup(0);
         print_result(in, fd == next_fd);
@@ -774,6 +857,30 @@ int main()
             print_result(in, WIFSIGNALED(status) && WTERMSIG(status)==SIGTERM);
         }
     }
+
+    clog << "# Testing wide chars\n";
+    {
+        ipstream dummy("true");
+        basic_ipstream<wchar_t> in("cat ./pstreams.wout");
+        wstring s;
+        in >> s;
+        wcout << s;
+        print_result(dummy, in);
+
+        wchar_t wc;
+        int count=0, gcount=0;
+        while (in.get(wc))
+        {
+            wcout << wc;
+            ++count;
+            gcount += in.gcount();
+        }
+        wcout << L'\n';
+        print_result(dummy, in.eof() && in.fail());
+        print_result(dummy, gcount == count);
+        wcout << L"Read: " << gcount << L" chars." << endl;
+    }
+
 
     return exit_status;
 }
