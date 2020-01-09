@@ -7,6 +7,9 @@ if(CMAKE_CXX_STANDARD EQUAL "98")
     message(FATAL_ERROR "CMAKE_CXX_STANDARD:STRING=98 is not supported.")
 endif()
 
+# Adhere to GNU filesystem layout conventions
+include(GNUInstallDirs)
+
 #####
 ##  Set the default target properties
 if(NOT CMAKE_CXX_STANDARD)
@@ -31,7 +34,7 @@ target_include_directories(pstreams INTERFACE
     $<BUILD_INTERFACE:"${PROJECT_SOURCE_DIR}">
     $<INSTALL_INTERFACE:"${CMAKE_INSTALL_PREFIX}/include/pstream">
 )
-install(FILES pstream.h DESTINATION "${CMAKE_INSTALL_PREFIX}/include/pstream")
+install(FILES pstream.h DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/pstreams")
 
 if(BUILD_TEST)
     add_executable(test_minimum test_minimum.cc)
